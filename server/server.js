@@ -894,7 +894,14 @@ app.post(
   }
 );
 
-app.use("/uploads", express.static(uploadDir));
+app.use(
+  "/uploads",
+  (req, res, next) => {
+    res.set("Cross-Origin-Resource-Policy", "cross-origin");
+    next();
+  },
+  express.static(uploadDir)
+);
 
 
 app.post("/api/checkout", auth, async (req, res) => {
@@ -1061,6 +1068,9 @@ app.post("/api/admin/repair-images", auth, requireAdmin, (req, res) => {
 
     if (fixups.has(next)) next = fixups.get(next);
 
+    if (next.startsWith("http://pawlinas-api.onrender.com/")) {
+      next = next.replace("http://", "https://");
+    }
     if (!next.startsWith("http")) {
       if (next.startsWith("images/")) next = `/${next}`;
       if (next.startsWith("uploads/")) next = `/${next}`;
