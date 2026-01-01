@@ -395,9 +395,7 @@ export default function AdminPanel() {
     const formData = new FormData();
     formData.append("image", file);
     try {
-      const res = await api.post("/admin/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const res = await api.post("/admin/upload", formData);
       const nextUrl = res.data.absolute_url || res.data.url;
       setter((prev) => ({ ...prev, image: nextUrl }));
       setStatus?.({ loading: false, error: "" });

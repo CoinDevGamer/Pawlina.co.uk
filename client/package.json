@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "private": true,
   "type": "module",
-  "homepage": "https://CoinDevGamer.github.io/MoltenMumWebsiteTest",
+  "homepage": "https://www.pawlinas.co.uk",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
