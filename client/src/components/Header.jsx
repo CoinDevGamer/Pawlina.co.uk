@@ -103,16 +103,21 @@ export default function Header({ user, onOrders, onBasket, onAccount }) {
           className="flex items-center gap-4 cursor-pointer shrink-0"
           whileHover={{ scale: 1.03 }}
         >
-          <motion.img
-  src={publicUrl("/images/pawlina-logo.png")}
-  className="
-    w-14 h-14 rounded-full border-2 border-[#d4b07a]
-    shadow-[0_0_25px_rgba(212,176,122,0.4)]
-    object-contain bg-[#3b2415] p-1
-  "
-  whileHover={{ rotate: 5, scale: 1.06 }}
-  whileTap={{ scale: 0.88, rotate: -10 }}
-/>
+          <motion.div
+            className="
+              w-14 h-14 rounded-full border-2 border-[#d4b07a]
+              shadow-[0_0_25px_rgba(212,176,122,0.4)]
+              bg-[#3b2415] overflow-hidden
+            "
+            whileHover={{ rotate: 5, scale: 1.06 }}
+            whileTap={{ scale: 0.88, rotate: -10 }}
+          >
+            <img
+              src={publicUrl("/images/pawlina-logo.png")}
+              alt="Pawlina’s Pet Shop"
+              className="w-full h-full object-cover scale-[1.08]"
+            />
+          </motion.div>
 
 
           <div className="flex flex-col leading-tight select-none">
