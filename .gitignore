@@ -8,6 +8,7 @@ build
 # env / secrets
 .env
 *.env
+!client/.env.production
 
 # runtime data (local/ephemeral)
 server/data/*.db
