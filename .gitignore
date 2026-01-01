@@ -9,5 +9,9 @@ build
 .env
 *.env
 
+# runtime data (local/ephemeral)
+server/data/*.db
+server/uploads/
+
 # mac junk
 .DS_Store
