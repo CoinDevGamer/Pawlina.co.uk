@@ -65,14 +65,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CoinDevGamer/MoltenMumWebsiteTest.git"
+    "url": "git+https://github.com/CoinDevGamer/Pawlina.co.uk.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/CoinDevGamer/MoltenMumWebsiteTest/issues"
+    "url": "https://github.com/CoinDevGamer/Pawlina.co.uk/issues"
   },
-  "homepage": "https://github.com/CoinDevGamer/MoltenMumWebsiteTest#readme",
+  "homepage": "https://github.com/CoinDevGamer/Pawlina.co.uk#readme",
   "description": ""
 }
