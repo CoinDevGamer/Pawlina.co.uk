@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS orders (
   admin_status TEXT DEFAULT 'awaiting',
   delivery_date TEXT,
   admin_note TEXT,
+  stripe_session_id TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(user_id) REFERENCES users(id)
 );
@@ -71,6 +72,15 @@ CREATE TABLE IF NOT EXISTS species (
   slug TEXT UNIQUE,
   label TEXT,
   icon TEXT DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS password_resets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT,
+  code_hash TEXT,
+  expires_at TEXT,
+  attempts INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 `);
 

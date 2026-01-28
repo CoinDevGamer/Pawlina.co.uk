@@ -103,8 +103,8 @@ export default function App() {
         return;
       }
 
-      if (delivery === "deliver" && totalCents < 500) {
-        push("⚠️ Delivery requires a minimum of £5.");
+      if (delivery === "deliver" && totalCents < 2000) {
+        push("⚠️ Delivery requires a minimum of £20.");
         return;
       }
 

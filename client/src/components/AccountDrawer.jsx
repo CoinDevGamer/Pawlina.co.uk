@@ -10,6 +10,11 @@ export default function AccountDrawer({
   onLogout,
 }) {
   const [tab, setTab] = useState("signin");
+  const [resetStep, setResetStep] = useState(0); // 0=off, 1=request, 2=verify
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetCode, setResetCode] = useState("");
+  const [resetPassword, setResetPassword] = useState("");
 
   // FORM (sign in / register)
   const [form, setForm] = useState({
@@ -42,6 +47,7 @@ export default function AccountDrawer({
         country: prev.country || user.country || "",
       }));
       setTab("account");
+      setResetStep(0);
     } else {
       // clear fields when logged out
       setAddr({
@@ -61,6 +67,47 @@ export default function AccountDrawer({
   // Short handlers
   const change = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const changeAddr = (k, v) => setAddr((a) => ({ ...a, [k]: v }));
+
+  const startReset = () => {
+    setResetEmail(form.email || "");
+    setResetCode("");
+    setResetPassword("");
+    setResetStep(1);
+  };
+
+  const sendResetCode = async () => {
+    if (resetBusy) return;
+    setResetBusy(true);
+    try {
+      await api.post("/auth/forgot-password", { email: resetEmail });
+      setResetStep(2);
+      alert("If the email exists, a code has been sent.");
+    } catch (err) {
+      alert("Could not send reset code.");
+    } finally {
+      setResetBusy(false);
+    }
+  };
+
+  const submitReset = async () => {
+    if (resetBusy) return;
+    setResetBusy(true);
+    try {
+      await api.post("/auth/reset-password", {
+        email: resetEmail,
+        code: resetCode,
+        password: resetPassword,
+      });
+      alert("Password updated. Please sign in.");
+      setForm((f) => ({ ...f, email: resetEmail, password: "" }));
+      setResetStep(0);
+      setTab("signin");
+    } catch (err) {
+      alert(err?.response?.data?.error || "Reset failed.");
+    } finally {
+      setResetBusy(false);
+    }
+  };
 
   const validateAddress = (payload) => {
     const fields = [
@@ -103,7 +150,7 @@ export default function AccountDrawer({
       }
 
       if (!navigator.geolocation) {
-        alert("Location access required.");
+        alert("Location access is required to confirm you are within our delivery area.");
         return;
       }
 
@@ -121,7 +168,7 @@ export default function AccountDrawer({
             alert("You must be within 15 miles of Grange-over-Sands.");
           }
         },
-        () => alert("Enable location access to register.")
+        () => alert("Enable location access to confirm you are within our delivery area.")
       );
     } else {
       await onLogin(form, false);
@@ -156,92 +203,172 @@ export default function AccountDrawer({
         {/* SIGN IN / REGISTER */}
         {!user && (
           <div className="space-y-5">
-            {/* Tabs */}
-            <div className="flex gap-2">
-              <button
-                className={`px-4 py-2 rounded-lg font-semibold border 
-                  ${
-                    tab === "signin"
-                      ? "bg-[#7b4b2a] text-white border-transparent"
-                      : "bg-white text-[#7b4b2a] border-[#d4b69c]"
-                  }`}
-                onClick={() => setTab("signin")}
-              >
-                Sign in
-              </button>
+            {resetStep > 0 ? (
+              <div className="space-y-4">
+                <div className="text-lg font-semibold text-[#7b4b2a]">
+                  Reset password
+                </div>
 
-              <button
-                className={`px-4 py-2 rounded-lg font-semibold border 
-                  ${
-                    tab === "register"
-                      ? "bg-[#7b4b2a] text-white border-transparent"
-                      : "bg-white text-[#7b4b2a] border-[#d4b69c]"
-                  }`}
-                onClick={() => setTab("register")}
-              >
-                Register
-              </button>
-            </div>
+                {resetStep === 1 && (
+                  <>
+                    <input
+                      className="input-etched"
+                      placeholder="Email"
+                      value={resetEmail}
+                      name="resetEmail"
+                      autoComplete="email"
+                      onChange={(e) => setResetEmail(e.target.value)}
+                    />
+                    <button
+                      className="w-full bg-[#7b4b2a] text-white py-3 rounded-lg font-semibold mt-2 hover:bg-[#5f381d] transition disabled:opacity-60"
+                      onClick={sendResetCode}
+                      disabled={resetBusy}
+                    >
+                      Send code
+                    </button>
+                  </>
+                )}
 
-            {/* Email */}
-            <input
-              className="input-etched"
-              placeholder="Email"
-              value={form.email}
-              name="email"
-              autoComplete="email"
-              onChange={(e) => change("email", e.target.value)}
-            />
+                {resetStep === 2 && (
+                  <>
+                    <input
+                      className="input-etched"
+                      placeholder="6-digit code"
+                      value={resetCode}
+                      name="resetCode"
+                      autoComplete="one-time-code"
+                      onChange={(e) => setResetCode(e.target.value)}
+                    />
+                    <input
+                      className="input-etched"
+                      placeholder="New password"
+                      type="password"
+                      value={resetPassword}
+                      name="resetPassword"
+                      autoComplete="new-password"
+                      onChange={(e) => setResetPassword(e.target.value)}
+                    />
+                    <button
+                      className="w-full bg-[#7b4b2a] text-white py-3 rounded-lg font-semibold mt-2 hover:bg-[#5f381d] transition disabled:opacity-60"
+                      onClick={submitReset}
+                      disabled={resetBusy}
+                    >
+                      Update password
+                    </button>
+                  </>
+                )}
 
-            {/* Register-only fields */}
-            {tab === "register" && (
+                <button
+                  className="text-sm text-[#7b4b2a] underline"
+                  onClick={() => setResetStep(0)}
+                  type="button"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            ) : (
               <>
+                {/* Tabs */}
+                <div className="flex gap-2">
+                  <button
+                    className={`px-4 py-2 rounded-lg font-semibold border 
+                      ${
+                        tab === "signin"
+                          ? "bg-[#7b4b2a] text-white border-transparent"
+                          : "bg-white text-[#7b4b2a] border-[#d4b69c]"
+                      }`}
+                    onClick={() => setTab("signin")}
+                  >
+                    Sign in
+                  </button>
+
+                  <button
+                    className={`px-4 py-2 rounded-lg font-semibold border 
+                      ${
+                        tab === "register"
+                          ? "bg-[#7b4b2a] text-white border-transparent"
+                          : "bg-white text-[#7b4b2a] border-[#d4b69c]"
+                      }`}
+                    onClick={() => setTab("register")}
+                  >
+                    Register
+                  </button>
+                </div>
+
+                {/* Email */}
                 <input
                   className="input-etched"
-                  placeholder="Full Name"
-                  value={form.name}
-                  name="fullName"
-                  autoComplete="name"
-                  onChange={(e) => change("name", e.target.value)}
+                  placeholder="Email"
+                  value={form.email}
+                  name="email"
+                  autoComplete="email"
+                  onChange={(e) => change("email", e.target.value)}
                 />
 
+                {/* Register-only fields */}
+                {tab === "register" && (
+                  <>
+                    <input
+                      className="input-etched"
+                      placeholder="Full Name"
+                      value={form.name}
+                      name="fullName"
+                      autoComplete="name"
+                      onChange={(e) => change("name", e.target.value)}
+                    />
+
+                    <input
+                      className="input-etched"
+                      placeholder="City"
+                      value={form.city}
+                      name="city"
+                      autoComplete="address-level2"
+                      onChange={(e) => change("city", e.target.value)}
+                    />
+
+                    <input
+                      className="input-etched"
+                      placeholder="Postcode"
+                      value={form.postcode}
+                      name="postcode"
+                      autoComplete="postal-code"
+                      onChange={(e) => change("postcode", e.target.value)}
+                    />
+                    <div className="text-xs text-[#7b4b2a]/80">
+                      We only use your location to confirm you are within 15 miles of Grange-over-Sands.
+                    </div>
+                  </>
+                )}
+
+                {/* Password */}
                 <input
                   className="input-etched"
-                  placeholder="City"
-                  value={form.city}
-                  name="city"
-                  autoComplete="address-level2"
-                  onChange={(e) => change("city", e.target.value)}
+                  placeholder="Password"
+                  type="password"
+                  value={form.password}
+                  name="password"
+                  autoComplete={tab === "register" ? "new-password" : "current-password"}
+                  onChange={(e) => change("password", e.target.value)}
                 />
 
-                <input
-                  className="input-etched"
-                  placeholder="Postcode"
-                  value={form.postcode}
-                  name="postcode"
-                  autoComplete="postal-code"
-                  onChange={(e) => change("postcode", e.target.value)}
-                />
+                {tab === "signin" && (
+                  <button
+                    className="text-sm text-[#7b4b2a] underline"
+                    onClick={startReset}
+                    type="button"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+
+                <button
+                  className="w-full bg-[#7b4b2a] text-white py-3 rounded-lg font-semibold mt-2 hover:bg-[#5f381d] transition"
+                  onClick={handleAuth}
+                >
+                  {tab === "register" ? "Create Account" : "Sign In"}
+                </button>
               </>
             )}
-
-            {/* Password */}
-            <input
-              className="input-etched"
-              placeholder="Password"
-              type="password"
-              value={form.password}
-              name="password"
-              autoComplete={tab === "register" ? "new-password" : "current-password"}
-              onChange={(e) => change("password", e.target.value)}
-            />
-
-            <button
-              className="w-full bg-[#7b4b2a] text-white py-3 rounded-lg font-semibold mt-2 hover:bg-[#5f381d] transition"
-              onClick={handleAuth}
-            >
-              {tab === "register" ? "Create Account" : "Sign In"}
-            </button>
           </div>
         )}
 

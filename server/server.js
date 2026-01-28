@@ -15,6 +15,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import fetch from "node-fetch";
 import dayjs from "dayjs";
+import crypto from "crypto";
 import db, { seedIfNeeded } from "./db.js";
 import multer from "multer";
 import fs from "fs";
@@ -56,25 +57,34 @@ const safePrice = (val) => {
   return Math.round(n);
 };
 
-const validateItemsPayload = (items = []) => {
+const isValidResetCode = (val) => typeof val === "string" && /^\d{6}$/.test(val);
+
+const normalizeOrderItems = (items = []) => {
   if (!Array.isArray(items) || items.length === 0 || items.length > 50)
     return null;
   const cleaned = [];
   for (const i of items) {
     const id = Number(i.id);
     const qty = Number(i.qty);
-    const price = safePrice(i.price_cents ?? 0);
     if (!id || id < 0 || !Number.isInteger(id)) return null;
-    if (!qty || qty < 1 || qty > 99) return null;
-    cleaned.push({
-      id,
-      qty,
-      name: safeText(i.name, 160),
-      price_cents: typeof price === "number" ? price : 0,
-    });
+    if (!qty || qty < 1 || qty > 99 || !Number.isInteger(qty)) return null;
+    cleaned.push({ id, qty });
   }
   return cleaned;
 };
+
+const sanitizeUserForOrder = (user = {}) => ({
+  name: safeText(user.name || "", 120),
+  email: safeText(user.email || "", 120),
+  address_line1: safeText(user.address_line1 || "", 200),
+  address_line2: safeText(user.address_line2 || "", 200),
+  city: safeText(user.city || "", 120),
+  postcode: safeText(user.postcode || "", 20),
+  country: safeText(user.country || "", 120),
+});
+
+const generateResetCode = () =>
+  String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
 
 
 // ---- Delivery Range Utilities ----
@@ -211,23 +221,33 @@ app.post(
         const userId = Number(metadata.user_id);
         const delivery = metadata.delivery_method;
         const items = JSON.parse(metadata.items_json || "[]");
+        const sessionId = s.id;
 
         const user = db.prepare("SELECT * FROM users WHERE id=?").get(userId);
         if (!user) throw new Error("User not found during webhook!");
+
+        const existing = db
+          .prepare("SELECT id FROM orders WHERE stripe_session_id=?")
+          .get(sessionId);
+        if (existing) {
+          console.log("ℹ️ Webhook order already exists:", existing.id);
+          return res.json({ received: true });
+        }
 
         // Insert PAID order
         const orderId = db
           .prepare(
             `INSERT INTO orders 
-             (user_id, items_json, address_json, delivery_method, total_cents, status)
-             VALUES (?, ?, ?, ?, ?, 'paid')`
+             (user_id, items_json, address_json, delivery_method, total_cents, status, stripe_session_id)
+             VALUES (?, ?, ?, ?, ?, 'paid', ?)`
           )
           .run(
             userId,
             JSON.stringify(items),
-            JSON.stringify(user),
+            JSON.stringify(sanitizeUserForOrder(user)),
             delivery,
-            s.amount_total
+            s.amount_total,
+            sessionId
           ).lastInsertRowid;
 
         // Email admin
@@ -296,6 +316,10 @@ const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 30,
 });
+const passwordResetLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+});
 const generalLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 300,
@@ -307,6 +331,8 @@ const uploadLimiter = rateLimit({
 
 app.use(generalLimiter);
 app.use("/api/auth", authLimiter);
+app.use("/api/auth/forgot-password", passwordResetLimiter);
+app.use("/api/auth/reset-password", passwordResetLimiter);
 
 seedIfNeeded();
 try {
@@ -317,6 +343,9 @@ try {
 } catch {}
 try {
   db.prepare("ALTER TABLE orders ADD COLUMN admin_note TEXT").run();
+} catch {}
+try {
+  db.prepare("ALTER TABLE orders ADD COLUMN stripe_session_id TEXT").run();
 } catch {}
 
 
@@ -456,6 +485,86 @@ app.post("/api/auth/login", (req, res) => {
 
 app.post("/api/auth/logout", (req, res) => {
   clearAuthCookie(res);
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/forgot-password", async (req, res) => {
+  const email = safeText(req.body.email || "", 120).toLowerCase();
+  if (!validEmail(email)) return res.json({ ok: true });
+
+  const user = db.prepare("SELECT id FROM users WHERE email=?").get(email);
+  if (!user) return res.json({ ok: true });
+
+  const code = generateResetCode();
+  const codeHash = bcrypt.hashSync(code, 10);
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+  db.prepare("DELETE FROM password_resets WHERE email=?").run(email);
+  db.prepare(
+    "INSERT INTO password_resets (email, code_hash, expires_at) VALUES (?, ?, ?)"
+  ).run(email, codeHash, expiresAt);
+
+  try {
+    await sendMail({
+      to: email,
+      subject: "Your password reset code",
+      html: `
+        <p>Your password reset code is:</p>
+        <h2>${code}</h2>
+        <p>This code expires in 15 minutes.</p>
+      `,
+    });
+  } catch (err) {
+    console.error("❌ Password reset email failed:", err);
+  }
+
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/reset-password", (req, res) => {
+  const email = safeText(req.body.email || "", 120).toLowerCase();
+  const code = safeText(req.body.code || "", 10);
+  const password = req.body.password || "";
+
+  if (!validEmail(email) || !isValidResetCode(code)) {
+    return res.status(400).json({ error: "Invalid reset data" });
+  }
+  if (typeof password !== "string" || password.length < 6) {
+    return res.status(400).json({ error: "Password too short" });
+  }
+
+  const user = db.prepare("SELECT id FROM users WHERE email=?").get(email);
+  if (!user) return res.status(400).json({ error: "Invalid reset data" });
+
+  const row = db
+    .prepare(
+      "SELECT * FROM password_resets WHERE email=? ORDER BY id DESC LIMIT 1"
+    )
+    .get(email);
+  if (!row) return res.status(400).json({ error: "Invalid reset data" });
+
+  if (row.attempts >= 5) {
+    return res.status(429).json({ error: "Too many attempts" });
+  }
+
+  const now = Date.now();
+  const expires = Date.parse(row.expires_at || "");
+  if (!expires || now > expires) {
+    return res.status(400).json({ error: "Reset code expired" });
+  }
+
+  const ok = bcrypt.compareSync(code, row.code_hash || "");
+  if (!ok) {
+    db.prepare(
+      "UPDATE password_resets SET attempts=attempts+1 WHERE id=?"
+    ).run(row.id);
+    return res.status(400).json({ error: "Invalid reset data" });
+  }
+
+  const hash = bcrypt.hashSync(password, 10);
+  db.prepare("UPDATE users SET password_hash=? WHERE id=?").run(hash, user.id);
+  db.prepare("DELETE FROM password_resets WHERE email=?").run(email);
+
   res.json({ ok: true });
 });
 
@@ -703,7 +812,7 @@ app.get("/api/items", (req, res) => {
 // -----------------------------------------------------
 app.post("/api/orders", auth, async (req, res) => {
   try {
-    const { items, total_cents, delivery_method = "collect" } = req.body;
+    const { items, delivery_method = "collect", stripe_session_id } = req.body;
 
     // Fetch user snapshot for address + email purposes
     const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.id);
@@ -712,13 +821,40 @@ app.post("/api/orders", auth, async (req, res) => {
       return res.status(400).json({ error: "No items provided" });
     }
 
-    const cleanedItems = validateItemsPayload(items);
-    if (!cleanedItems) return res.status(400).json({ error: "Bad items payload" });
+    const normalized = normalizeOrderItems(items);
+    if (!normalized) return res.status(400).json({ error: "Bad items payload" });
 
-    const safeTotal = safePrice(total_cents);
-    if (safeTotal === null) return res.status(400).json({ error: "Bad total" });
+    const snapshotItems = [];
+    let safeTotal = 0;
 
-    const itemsJson = JSON.stringify(cleanedItems);
+    for (const i of normalized) {
+      const dbItem = db.prepare("SELECT * FROM items WHERE id=?").get(i.id);
+      if (!dbItem) return res.status(400).json({ error: "Item not found" });
+      snapshotItems.push({
+        id: dbItem.id,
+        name: dbItem.name,
+        price_cents: dbItem.price_cents,
+        qty: i.qty,
+      });
+      safeTotal += dbItem.price_cents * i.qty;
+    }
+
+    const itemsJson = JSON.stringify(snapshotItems);
+    const safeDelivery = safeText(delivery_method || "collect", 20) || "collect";
+    const safeStripeSession = safeText(stripe_session_id || "", 200);
+
+    if (safeStripeSession) {
+      const existingByStripe = db
+        .prepare("SELECT id FROM orders WHERE stripe_session_id=?")
+        .get(safeStripeSession);
+      if (existingByStripe) {
+        return res.json({
+          ok: true,
+          orderId: existingByStripe.id,
+          deduped: true,
+        });
+      }
+    }
 
     // Deduplicate recent identical orders (within 24h) to avoid double email when webhook also fires
     const existing = db
@@ -730,7 +866,7 @@ app.post("/api/orders", auth, async (req, res) => {
         ORDER BY id DESC LIMIT 1
       `
       )
-      .get(req.user.id, safeTotal, delivery_method, itemsJson);
+      .get(req.user.id, safeTotal, safeDelivery, itemsJson);
 
     if (existing) {
       return res.json({ ok: true, orderId: existing.id, deduped: true });
@@ -739,16 +875,17 @@ app.post("/api/orders", auth, async (req, res) => {
     const orderId = db
       .prepare(
         `INSERT INTO orders 
-         (user_id, items_json, address_json, delivery_method, total_cents, status)
-         VALUES (?, ?, ?, ?, ?, ?)`
+         (user_id, items_json, address_json, delivery_method, total_cents, status, stripe_session_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         req.user.id,
         itemsJson,
-        JSON.stringify(user),
-        delivery_method,
+        JSON.stringify(sanitizeUserForOrder(user)),
+        safeDelivery,
         safeTotal,
-        "placed"
+        "placed",
+        safeStripeSession || null
       ).lastInsertRowid;
 
     // Send admin notification (fallback when webhook missing)
@@ -766,7 +903,7 @@ app.post("/api/orders", auth, async (req, res) => {
           </p>
           <h2>Items</h2>
           <ul>
-            ${cleanedItems
+            ${snapshotItems
               .map(
                 (i) =>
                   `<li>${i.qty} × ${safeText(i.name, 160)} — £${(
@@ -929,10 +1066,15 @@ app.post("/api/checkout", auth, async (req, res) => {
     // ---------------------------------------------------------
     // VALIDATE ITEMS + CREATE SNAPSHOT FOR THE ORDER RECORD
     // ---------------------------------------------------------
-    const line_items = [];
-    const snapshotItems = []; // ✅ FIX: Save full product info
+    const normalized = normalizeOrderItems(items);
+    if (!normalized) {
+      return res.status(400).json({ error: "Bad items payload" });
+    }
 
-    for (const i of items) {
+    const line_items = [];
+    const snapshotItems = [];
+
+    for (const i of normalized) {
       const dbItem = db.prepare("SELECT * FROM items WHERE id=?").get(i.id);
 
       if (!dbItem)
@@ -960,6 +1102,7 @@ app.post("/api/checkout", auth, async (req, res) => {
     // ---------------------------------------------------------
     // STRIPE CHECKOUT SESSION
     // ---------------------------------------------------------
+    const safeDelivery = safeText(delivery_method || "collect", 20) || "collect";
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -970,12 +1113,12 @@ app.post("/api/checkout", auth, async (req, res) => {
 
       metadata: {
         user_id: req.user.id,
-        delivery_method,
+        delivery_method: safeDelivery,
         items_json: JSON.stringify(snapshotItems), // ✅ FIXED
       },
     });
 
-    res.json({ url: session.url });
+    res.json({ url: session.url, session_id: session.id });
   } catch (err) {
     console.error("Stripe checkout error:", err);
     res.status(500).json({ error: "Checkout failed" });
@@ -990,7 +1133,18 @@ app.get("/api/orders", auth, (req, res) => {
   const rows = db
     .prepare("SELECT * FROM orders WHERE user_id=? ORDER BY id DESC")
     .all(req.user.id);
-  res.json(rows);
+  const sanitized = rows.map((row) => {
+    if (!row.address_json) return row;
+    try {
+      const addr = JSON.parse(row.address_json);
+      if (addr && typeof addr === "object") {
+        delete addr.password_hash;
+        row.address_json = JSON.stringify(addr);
+      }
+    } catch {}
+    return row;
+  });
+  res.json(sanitized);
 });
 
 // ADMIN ORDERS
@@ -1020,7 +1174,22 @@ app.get("/api/admin/orders", auth, requireAdmin, (req, res) => {
     )
     .all();
 
-  res.json({ active, archived });
+  const scrub = (row) => {
+    if (!row.address_json) return row;
+    try {
+      const addr = JSON.parse(row.address_json);
+      if (addr && typeof addr === "object") {
+        delete addr.password_hash;
+        row.address_json = JSON.stringify(addr);
+      }
+    } catch {}
+    return row;
+  };
+
+  res.json({
+    active: active.map(scrub),
+    archived: archived.map(scrub),
+  });
 });
 
 app.put("/api/admin/orders/:id", auth, requireAdmin, (req, res) => {

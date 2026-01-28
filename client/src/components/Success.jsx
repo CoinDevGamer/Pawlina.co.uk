@@ -25,6 +25,7 @@ export default function Success() {
         items: snapshot.items || [],
         total_cents: snapshot.total_cents,
         delivery_method: snapshot.delivery_method || "collect",
+        stripe_session_id: snapshot.stripe_session_id || "",
       })
         .then(() => {
           setStatus("ok");
@@ -35,7 +36,7 @@ export default function Success() {
           setStatus("fail");
         });
     } else {
-      setStatus("fail");
+      setStatus("ok");
     }
   }, []);
 

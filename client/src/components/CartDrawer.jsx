@@ -25,8 +25,6 @@ export default function CartDrawer({
 
   const remove = (id) => setCart((c) => c.filter((x) => x.id !== id));
 
-  const deliveryWarn = delivery === "deliver" && totalCents < 500;
-
   /* ------------------------------------------------------------
      CHECKOUT — with SNAPSHOT saved for Success page
   ------------------------------------------------------------ */
@@ -50,11 +48,6 @@ export default function CartDrawer({
       return;
     }
 
-    if (cart.length !== 1) {
-      push("⚠️ Only one item can be checked out at a time.");
-      return;
-    }
-
     try {
       const snapshotItems = cart.map((i) => ({
         id: i.id,
@@ -70,8 +63,6 @@ export default function CartDrawer({
         created_at: Date.now(),
       };
 
-      localStorage.setItem("pendingOrder", JSON.stringify(pending));
-
       const stripeItems = cart.map((i) => ({
         id: i.id,
         qty: i.qty,
@@ -81,6 +72,14 @@ export default function CartDrawer({
         items: stripeItems,
         delivery_method: delivery,
       });
+
+      localStorage.setItem(
+        "pendingOrder",
+        JSON.stringify({
+          ...pending,
+          stripe_session_id: session?.session_id || "",
+        })
+      );
 
       if (session?.url) {
         window.location.href = session.url;
