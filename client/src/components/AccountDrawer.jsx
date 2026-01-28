@@ -224,8 +224,13 @@ export default function AccountDrawer({
                       onClick={sendResetCode}
                       disabled={resetBusy}
                     >
-                      {resetBusy ? "Sending..." : "Send code"}
+                      {resetBusy ? "Loading..." : "Send code"}
                     </button>
+                    {resetBusy && (
+                      <div className="text-xs text-[#7b4b2a]/80">
+                        Please wait… sending your reset code.
+                      </div>
+                    )}
                     <div className="text-xs text-[#7b4b2a]/80">
                       Check your spam folder. If you don’t receive the email within a few minutes,
                       please contact the shop.
@@ -257,8 +262,13 @@ export default function AccountDrawer({
                       onClick={submitReset}
                       disabled={resetBusy}
                     >
-                      {resetBusy ? "Updating..." : "Update password"}
+                      {resetBusy ? "Loading..." : "Update password"}
                     </button>
+                    {resetBusy && (
+                      <div className="text-xs text-[#7b4b2a]/80">
+                        Please wait… updating your password.
+                      </div>
+                    )}
                     <div className="text-xs text-[#7b4b2a]/80">
                       If you didn’t get a code, go back and request a new one or contact the shop.
                     </div>
