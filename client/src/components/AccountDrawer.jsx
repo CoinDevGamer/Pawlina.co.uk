@@ -38,14 +38,15 @@ export default function AccountDrawer({
   // Prefill on user login
   useEffect(() => {
     if (user) {
-      setAddr((prev) => ({
-        name: prev.name || user.name || "",
-        address_line1: prev.address_line1 || user.address_line1 || "",
-        address_line2: prev.address_line2 || user.address_line2 || "",
-        city: prev.city || user.city || "",
-        postcode: prev.postcode || user.postcode || "",
-        country: prev.country || user.country || "",
-      }));
+      // Always hydrate from server-backed user profile to avoid stale local values.
+      setAddr({
+        name: user.name || "",
+        address_line1: user.address_line1 || "",
+        address_line2: user.address_line2 || "",
+        city: user.city || "",
+        postcode: user.postcode || "",
+        country: user.country || "",
+      });
       setTab("account");
       setResetStep(0);
     } else {
@@ -134,11 +135,13 @@ export default function AccountDrawer({
       alert(error);
       return;
     }
-    await api.put("/account/me", addr);
-
-    const updated = await Auth.me();
-    setUser(updated);
-    alert("Saved!");
+    try {
+      const updated = await api.put("/account/me", addr).then((r) => r.data);
+      setUser(updated);
+      alert("Saved!");
+    } catch (err) {
+      alert(err?.response?.data?.error || "Failed to save address.");
+    }
   };
 
   // Auth

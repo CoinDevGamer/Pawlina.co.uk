@@ -58,16 +58,30 @@ const safePrice = (val) => {
 };
 
 const isValidResetCode = (val) => typeof val === "string" && /^\d{6}$/.test(val);
+const ALLOWED_DELIVERY_METHODS = new Set(["collect", "deliver"]);
+const MAX_ITEM_QTY = 10;
+const normalizeDeliveryMethod = (val) => {
+  const next = safeText(val || "collect", 20).toLowerCase();
+  return ALLOWED_DELIVERY_METHODS.has(next) ? next : null;
+};
+const normalizeStoredImageUrl = (val) => {
+  const raw = safeText(val || "", 500);
+  if (!raw) return "";
+  const idx = raw.indexOf("/uploads/");
+  if (idx >= 0) return raw.slice(idx).split(/\s/)[0];
+  if (raw.startsWith("uploads/")) return `/${raw}`;
+  return raw;
+};
 
 const normalizeOrderItems = (items = []) => {
-  if (!Array.isArray(items) || items.length === 0 || items.length > 50)
-    return null;
+  if (!Array.isArray(items) || items.length === 0) return null;
   const cleaned = [];
   for (const i of items) {
     const id = Number(i.id);
     const qty = Number(i.qty);
     if (!id || id < 0 || !Number.isInteger(id)) return null;
-    if (!qty || qty < 1 || qty > 99 || !Number.isInteger(qty)) return null;
+    if (!qty || qty < 1 || qty > MAX_ITEM_QTY || !Number.isInteger(qty))
+      return null;
     cleaned.push({ id, qty });
   }
   return cleaned;
@@ -184,7 +198,11 @@ if (!process.env.JWT_SECRET) {
   console.warn("⚠️ Using fallback JWT secret. Set JWT_SECRET in production!");
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const STRIPE_SECRET_KEY = (process.env.STRIPE_SECRET_KEY || "").trim();
+const STRIPE_CONFIGURED = /^sk_(test|live)_/.test(STRIPE_SECRET_KEY);
+const stripe = STRIPE_CONFIGURED ? new Stripe(STRIPE_SECRET_KEY) : null;
+const logsDir = path.join(__dirname, "logs");
+if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 
 
 // -----------------------------------------------------
@@ -307,9 +325,35 @@ app.use(
   })
 );
 app.use(helmet());
+app.use((req, res, next) => {
+  const reqId = crypto.randomUUID();
+  const start = Date.now();
+  req.id = reqId;
+  res.setHeader("x-request-id", reqId);
+  res.on("finish", () => {
+    const ms = Date.now() - start;
+    console.log(
+      `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} ${res.statusCode} ${ms}ms id=${reqId}`
+    );
+  });
+  next();
+});
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
+});
+app.get("/api/ready", (req, res) => {
+  try {
+    db.prepare("SELECT 1 AS ok").get();
+    const missing = [];
+    if (!process.env.JWT_SECRET) missing.push("JWT_SECRET");
+    if (!STRIPE_CONFIGURED) missing.push("STRIPE_SECRET_KEY");
+    if (missing.length) return res.status(503).json({ ok: false, missing });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Readiness check failed:", err);
+    res.status(503).json({ ok: false });
+  }
 });
 
 const authLimiter = rateLimit({
@@ -378,8 +422,19 @@ function clearAuthCookie(res) {
   });
 }
 
+function readAuthToken(req) {
+  const cookieToken = req.cookies?.token;
+  if (cookieToken) return cookieToken;
+
+  const authHeader = req.headers?.authorization || "";
+  if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+    return authHeader.slice("Bearer ".length).trim();
+  }
+  return "";
+}
+
 function auth(req, res, next) {
-  const token = req.cookies.token;
+  const token = readAuthToken(req);
   if (!token) return res.status(401).json({ error: "Unauthenticated" });
 
   try {
@@ -459,7 +514,7 @@ app.post("/api/auth/register", async (req, res) => {
     const token = jwt.sign({ id, email }, JWT_SECRET, { expiresIn: "7d" });
     setAuthCookie(res, token);
 
-    res.json({ id, email, name, postcode });
+    res.json({ id, email, name, postcode, token });
   } catch (e) {
     if (e.code === "SQLITE_CONSTRAINT_UNIQUE")
       return res.status(409).json({ error: "Email already exists" });
@@ -480,7 +535,7 @@ app.post("/api/auth/login", (req, res) => {
   const token = jwt.sign({ id: u.id, email }, JWT_SECRET, { expiresIn: "7d" });
   setAuthCookie(res, token);
 
-  res.json({ id: u.id, email: u.email, name: u.name, role: u.role });
+  res.json({ id: u.id, email: u.email, name: u.name, role: u.role, token });
 });
 
 app.post("/api/auth/logout", (req, res) => {
@@ -584,9 +639,13 @@ app.get("/api/account/me", auth, (req, res) => {
 // -----------------------------------------------------
 app.get("/api/categories", (req, res) => {
   const rows = db
-    .prepare("SELECT id, name, slug FROM categories ORDER BY name")
+    .prepare("SELECT id, name, slug, species FROM categories ORDER BY name")
     .all();
-  res.json(rows);
+  const normalized = rows.map((r) => ({
+    ...r,
+    species: r.species ? safeSlug(r.species, 80) : null,
+  }));
+  res.json(normalized);
 });
 
 app.get("/api/species", (req, res) => {
@@ -602,15 +661,16 @@ app.post("/api/admin/categories", auth, requireAdmin, (req, res) => {
   const { name = "" } = req.body;
   const trimmed = safeText(name, 80);
   if (!trimmed) return res.status(400).json({ error: "Name required" });
+  const species = safeSlug(req.body.species || "", 80);
 
   const slug = trimmed.toLowerCase().replace(/\s+/g, "-");
 
   try {
     const id = db
-      .prepare("INSERT INTO categories (name, slug) VALUES (?, ?)")
-      .run(trimmed, slug).lastInsertRowid;
+      .prepare("INSERT INTO categories (name, slug, species) VALUES (?, ?, ?)")
+      .run(trimmed, slug, species).lastInsertRowid;
 
-    res.json({ id, name: trimmed, slug });
+    res.json({ id, name: trimmed, slug, species: species || null });
   } catch (err) {
     if (err.code === "SQLITE_CONSTRAINT_UNIQUE")
       return res.status(409).json({ error: "Category exists" });
@@ -697,7 +757,7 @@ app.post("/api/admin/items", auth, requireAdmin, (req, res) => {
   const name = safeText(req.body.name, 160);
   const description = safeLongText(req.body.description, 2000);
   const species = safeSlug(req.body.species || "", 80);
-  const image_url = safeText(req.body.image_url || req.body.image || "", 500);
+  const image_url = normalizeStoredImageUrl(req.body.image_url || req.body.image || "");
 
   let { price_cents } = req.body;
 
@@ -813,6 +873,10 @@ app.get("/api/items", (req, res) => {
 app.post("/api/orders", auth, async (req, res) => {
   try {
     const { items, delivery_method = "collect", stripe_session_id } = req.body;
+    const safeDelivery = normalizeDeliveryMethod(delivery_method);
+    if (!safeDelivery) {
+      return res.status(400).json({ error: "Invalid delivery method" });
+    }
 
     // Fetch user snapshot for address + email purposes
     const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.id);
@@ -840,7 +904,6 @@ app.post("/api/orders", auth, async (req, res) => {
     }
 
     const itemsJson = JSON.stringify(snapshotItems);
-    const safeDelivery = safeText(delivery_method || "collect", 20) || "collect";
     const safeStripeSession = safeText(stripe_session_id || "", 200);
 
     if (safeStripeSession) {
@@ -895,7 +958,7 @@ app.post("/api/orders", auth, async (req, res) => {
         html: `
           <h1>Order #${orderId}</h1>
           <p><b>User:</b> ${user.name || ""} (${user.email || ""})</p>
-          <p><b>Delivery:</b> ${delivery_method}</p>
+          <p><b>Delivery:</b> ${safeDelivery}</p>
           <p><b>Address:</b><br>
             ${user.address_line1 || ""}<br>
             ${user.city || ""}, ${user.postcode || ""}<br>
@@ -1043,7 +1106,18 @@ app.use(
 
 app.post("/api/checkout", auth, async (req, res) => {
   try {
+    if (!STRIPE_CONFIGURED || !stripe) {
+      return res.status(503).json({
+        error:
+          "Checkout is temporarily unavailable: Stripe is not configured on the server.",
+      });
+    }
+
     const { items, delivery_method } = req.body;
+    const safeDelivery = normalizeDeliveryMethod(delivery_method);
+    if (!safeDelivery) {
+      return res.status(400).json({ error: "Invalid delivery method" });
+    }
 
     // Fetch user for address check
     const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.id);
@@ -1102,7 +1176,6 @@ app.post("/api/checkout", auth, async (req, res) => {
     // ---------------------------------------------------------
     // STRIPE CHECKOUT SESSION
     // ---------------------------------------------------------
-    const safeDelivery = safeText(delivery_method || "collect", 20) || "collect";
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -1121,7 +1194,19 @@ app.post("/api/checkout", auth, async (req, res) => {
     res.json({ url: session.url, session_id: session.id });
   } catch (err) {
     console.error("Stripe checkout error:", err);
-    res.status(500).json({ error: "Checkout failed" });
+    const stripeType = err?.type || "";
+    if (stripeType.includes("StripeAuthenticationError")) {
+      return res.status(503).json({
+        error:
+          "Checkout is temporarily unavailable: invalid Stripe server credentials.",
+      });
+    }
+    if (stripeType.includes("StripeInvalidRequestError")) {
+      return res.status(400).json({
+        error: "Checkout request rejected by Stripe. Please review basket items.",
+      });
+    }
+    res.status(500).json({ error: "Checkout failed on server" });
   }
 });
 
@@ -1240,10 +1325,13 @@ app.post("/api/admin/repair-images", auth, requireAdmin, (req, res) => {
     if (next.startsWith("http://pawlinas-api.onrender.com/")) {
       next = next.replace("http://", "https://");
     }
+    const uploadIdx = next.indexOf("/uploads/");
+    if (uploadIdx >= 0) {
+      next = next.slice(uploadIdx).split(/\s/)[0];
+    }
     if (!next.startsWith("http")) {
       if (next.startsWith("images/")) next = `/${next}`;
       if (next.startsWith("uploads/")) next = `/${next}`;
-      if (next.startsWith("/uploads/")) next = `${base}${next}`;
     }
 
     if (next !== row.image_url) {
@@ -1253,6 +1341,36 @@ app.post("/api/admin/repair-images", auth, requireAdmin, (req, res) => {
   }
 
   res.json({ ok: true, updated });
+});
+
+app.use("/api", (req, res, next) => {
+  if (res.headersSent) return next();
+  res.status(404).json({ error: "Not found" });
+});
+
+app.use((err, req, res, next) => {
+  console.error("Unhandled server error:", err);
+  try {
+    const line =
+      JSON.stringify({
+        at: new Date().toISOString(),
+        reqId: req?.id || "",
+        method: req?.method || "",
+        path: req?.originalUrl || "",
+        message: err?.message || "Unknown error",
+      }) + "\n";
+    fs.appendFileSync(path.join(logsDir, "errors.log"), line);
+  } catch {}
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: "Internal server error" });
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection:", reason);
 });
 
 app.listen(PORT, HOST, () =>

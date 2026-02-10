@@ -73,6 +73,7 @@ export default function AdminPanel() {
 
   // category manager
   const [newCategory, setNewCategory] = useState("");
+  const [newCategorySpecies, setNewCategorySpecies] = useState("");
   const [catBusy, setCatBusy] = useState(false);
 
   // species manager
@@ -146,6 +147,12 @@ export default function AdminPanel() {
     loadItems();
   }, [speciesTab]);
 
+  useEffect(() => {
+    if (!newCategorySpecies && speciesTab) {
+      setNewCategorySpecies(speciesTab);
+    }
+  }, [speciesTab, newCategorySpecies]);
+
   const filtered = useMemo(() => {
     return items.filter((it) => {
       if (filter === "in") return !!it.in_stock;
@@ -184,6 +191,24 @@ export default function AdminPanel() {
   const activeSpeciesLabel =
     speciesList.find((s) => s.slug === speciesTab)?.label || "Select a species";
 
+  const categoryMatchesSpecies = (cat, slug) =>
+    !cat?.species || cat.species === slug;
+
+  const categoriesForSpecies = (slug) =>
+    categories.filter((c) => categoryMatchesSpecies(c, slug));
+
+  const categoryOptionsForItem = (it) =>
+    categories.filter(
+      (c) =>
+        c.id === it.category_id ||
+        categoryMatchesSpecies(c, it.species || speciesTab)
+    );
+
+  const visibleCategories = useMemo(
+    () => categoriesForSpecies(speciesTab),
+    [categories, speciesTab]
+  );
+
   // ===== HELPERS FOR ITEMS =====
   const markChanged = (upd) => {
     setItems((list) =>
@@ -207,24 +232,28 @@ export default function AdminPanel() {
 
   const onField = (row, key, val) => markChanged({ id: row.id, [key]: val });
 
+  const itemToPayload = (it) => {
+    const imageVal = normalizeImageUrl(it.image || it.image_url || "");
+    return {
+      id: it.id,
+      species: it.species || speciesTab,
+      category_id: it.category_id,
+      name: it.name,
+      description: it.description || "",
+      price_cents: Number(it.price_cents) || 0,
+      image: imageVal,
+      image_url: imageVal,
+      in_stock: it.in_stock ? 1 : 0,
+      special_offer: it.special_offer ? 1 : 0,
+    };
+  };
+
   const saveAll = async () => {
     if (changed.size === 0) return;
     setSaving(true);
     try {
       for (const [, it] of changed) {
-        const imageVal = normalizeImageUrl(it.image || it.image_url || "");
-        await AdminApi.upsertItem({
-          id: it.id,
-          species: it.species || speciesTab,
-          category_id: it.category_id,
-          name: it.name,
-          description: it.description || "",
-          price_cents: Number(it.price_cents) || 0,
-          image: imageVal,
-          image_url: imageVal,
-          in_stock: it.in_stock ? 1 : 0,
-          special_offer: it.special_offer ? 1 : 0,
-        });
+        await AdminApi.upsertItem(itemToPayload(it));
       }
       setChanged(new Map());
       await loadItems();
@@ -251,9 +280,23 @@ export default function AdminPanel() {
     }
   };
 
-  const softDelete = (row) => {
+  const softDelete = async (row) => {
     if (!window.confirm(`Soft-remove "${row.name}" from catalogue?`)) return;
-    markChanged({ id: row.id, in_stock: 0, special_offer: 0 });
+    try {
+      await AdminApi.upsertItem(
+        itemToPayload({ ...row, in_stock: 0, special_offer: 0 })
+      );
+      setChanged((prev) => {
+        const next = new Map(prev);
+        next.delete(row.id);
+        return next;
+      });
+      await loadItems();
+      alert("✅ Item soft-removed.");
+    } catch (err) {
+      console.error("❌ Failed to soft-remove item:", err);
+      alert("Failed to soft-remove item.");
+    }
   };
 
   const hardDelete = async (row) => {
@@ -265,6 +308,11 @@ export default function AdminPanel() {
       return;
     try {
       await AdminApi.deleteItem(row.id);
+      setChanged((prev) => {
+        const next = new Map(prev);
+        next.delete(row.id);
+        return next;
+      });
       await loadItems();
       alert("🗑️ Item deleted.");
     } catch (err) {
@@ -274,7 +322,7 @@ export default function AdminPanel() {
   };
 
   const openAdd = () => {
-    const firstCat = categories[0]?.id || "";
+    const firstCat = categoriesForSpecies(speciesTab)[0]?.id || categories[0]?.id || "";
     setDraft((prev) => {
       if (prev?.image_preview?.startsWith("blob:")) {
         URL.revokeObjectURL(prev.image_preview);
@@ -316,8 +364,9 @@ export default function AdminPanel() {
       return;
     }
     try {
+      const createdSpecies = draft.species || speciesTab || "dog";
       await AdminApi.upsertItem({
-        species: draft.species || speciesTab || "dog",
+        species: createdSpecies,
         category_id: draft.category_id,
         name: draft.name.trim(),
         description: draft.description || "",
@@ -327,7 +376,11 @@ export default function AdminPanel() {
         special_offer: draft.special_offer ? 1 : 0,
       });
       setShowAdd(false);
-      await loadItems();
+      if (createdSpecies !== speciesTab) {
+        setSpeciesTab(createdSpecies);
+      } else {
+        await loadItems();
+      }
       alert("✅ Item created.");
     } catch (err) {
       console.error("❌ Failed to create item:", err);
@@ -396,7 +449,8 @@ export default function AdminPanel() {
     formData.append("image", file);
     try {
       const res = await api.post("/admin/upload", formData);
-      const nextUrl = res.data.absolute_url || res.data.url;
+      // Prefer relative URL so image links remain valid across env/domain changes.
+      const nextUrl = normalizeImageUrl(res.data.url || res.data.absolute_url || "");
       setter((prev) => ({ ...prev, image: nextUrl }));
       setStatus?.({ loading: false, error: "" });
     } catch (err) {
@@ -415,13 +469,19 @@ export default function AdminPanel() {
       categories.map((c) => ({
         ...c,
         nameLower: c.name.toLowerCase(),
+        speciesNorm: c.species || "",
       })),
     [categories]
   );
 
+  const targetCategorySpecies =
+    newCategorySpecies === "all" ? "" : (newCategorySpecies || "");
+
   const isDuplicateCategory = newCategory.trim()
     ? normalisedCategories.some(
-        (c) => c.nameLower === newCategory.trim().toLowerCase()
+        (c) =>
+          c.nameLower === newCategory.trim().toLowerCase() &&
+          c.speciesNorm === targetCategorySpecies
       )
     : false;
 
@@ -534,8 +594,12 @@ export default function AdminPanel() {
     }
     setCatBusy(true);
     try {
-      await AdminApi.createCategory({ name });
+      await AdminApi.createCategory({
+        name,
+        species: targetCategorySpecies,
+      });
       setNewCategory("");
+      setNewCategorySpecies(speciesTab || "");
       await loadCategories();
       alert("✅ Category created.");
     } catch (err) {
@@ -1058,7 +1122,7 @@ export default function AdminPanel() {
                             value={row.category_id || ""}
                             onChange={(e) => onField(row, "category_id", Number(e.target.value))}
                           >
-                            {categories.map((c) => (
+                            {categoryOptionsForItem(row).map((c) => (
                               <option key={c.id} value={c.id}>
                                 {c.name}
                               </option>
@@ -1138,7 +1202,7 @@ export default function AdminPanel() {
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#d6b68f] bg-white text-[#3f2817] shadow-sm hover:shadow-md transition"
                             onClick={() => softDelete(row)}
                           >
-                            🌿 Soft remove
+                            🌿 Soft remove now
                           </button>
                           <button
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-red-300 bg-gradient-to-r from-red-100 to-red-200 text-red-700 shadow-sm hover:shadow-md transition"
@@ -1196,7 +1260,7 @@ export default function AdminPanel() {
                       value={row.category_id || ""}
                       onChange={(e) => onField(row, "category_id", Number(e.target.value))}
                     >
-                      {categories.map((c) => (
+                      {categoryOptionsForItem(row).map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>
@@ -1255,7 +1319,7 @@ export default function AdminPanel() {
                       className="px-3 py-2 rounded-xl border border-[#d6b68f] bg-white text-[#3f2817] shadow-sm"
                       onClick={() => softDelete(row)}
                     >
-                      Remove (soft)
+                      Soft remove now
                     </button>
                     <button
                       className="px-3 py-2 rounded-xl border border-red-300 bg-gradient-to-r from-red-100 to-red-200 text-red-700 shadow-sm"
@@ -1338,26 +1402,43 @@ export default function AdminPanel() {
               </div>
 
               <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                {categories.map((c) => (
+                {visibleCategories.map((c) => (
                   <div
                     key={c.id}
                     className="flex items-center justify-between bg-[#fffaf1] rounded-xl px-3 py-2 border border-[#f0e3cd]"
                   >
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{c.name}</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#e7d5b5] text-[#7a6140]">
+                        {c.species
+                          ? speciesList.find((s) => s.slug === c.species)?.label || c.species
+                          : "All species"}
+                      </span>
                     </div>
                     <button className="text-xs text-red-700 hover:underline" onClick={() => deleteCategory(c)}>
                       Delete
                     </button>
                   </div>
                 ))}
-                {categories.length === 0 && (
+                {visibleCategories.length === 0 && (
                   <div className="text-xs text-black/60">No categories yet – create one below.</div>
                 )}
               </div>
 
               <div className="border-t border-[#f0e3cd] pt-3 space-y-2">
                 <div className="text-sm font-semibold">Add new category</div>
+                <select
+                  className="input-etched"
+                  value={newCategorySpecies || speciesTab || "all"}
+                  onChange={(e) => setNewCategorySpecies(e.target.value)}
+                >
+                  <option value="all">All species</option>
+                  {speciesList.map((sp) => (
+                    <option key={sp.id} value={sp.slug}>
+                      {sp.label}
+                    </option>
+                  ))}
+                </select>
                 <input
                   className={`input-etched ${isDuplicateCategory ? "border-red-500" : ""}`}
                   placeholder="e.g. Natural Chews, Treats"
@@ -1467,7 +1548,7 @@ export default function AdminPanel() {
                       value={draft.category_id}
                       onChange={(e) => setDraft({ ...draft, category_id: Number(e.target.value) })}
                     >
-                      {categories.map((c) => (
+                      {categoriesForSpecies(draft.species || speciesTab).map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>
@@ -1689,7 +1770,7 @@ export default function AdminPanel() {
                         })
                       }
                     >
-                      {categories.map((c) => (
+                      {categoriesForSpecies(editingItem.species || speciesTab).map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>

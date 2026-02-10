@@ -14,13 +14,19 @@ export default function CartDrawer({
   setDelivery,
   push,
 }) {
+  const MAX_ITEM_QTY = 10;
   if (!open) return null;
 
   const updateQty = (id, d) =>
     setCart((c) =>
-      c.map((x) =>
-        x.id === id ? { ...x, qty: Math.max(1, x.qty + d) } : x
-      )
+      c.map((x) => {
+        if (x.id !== id) return x;
+        const nextQty = Math.max(1, Math.min(MAX_ITEM_QTY, x.qty + d));
+        if (d > 0 && x.qty >= MAX_ITEM_QTY) {
+          push(`⚠️ Max quantity per item is ${MAX_ITEM_QTY}.`);
+        }
+        return { ...x, qty: nextQty };
+      })
     );
 
   const remove = (id) => setCart((c) => c.filter((x) => x.id !== id));
@@ -49,7 +55,12 @@ export default function CartDrawer({
     }
 
     try {
-      const snapshotItems = cart.map((i) => ({
+      const safeCart = cart.map((i) => ({
+        ...i,
+        qty: Math.max(1, Math.min(MAX_ITEM_QTY, Number(i.qty) || 1)),
+      }));
+
+      const snapshotItems = safeCart.map((i) => ({
         id: i.id,
         name: i.name,
         price_cents: i.price_cents,
@@ -63,7 +74,7 @@ export default function CartDrawer({
         created_at: Date.now(),
       };
 
-      const stripeItems = cart.map((i) => ({
+      const stripeItems = safeCart.map((i) => ({
         id: i.id,
         qty: i.qty,
       }));
@@ -87,7 +98,11 @@ export default function CartDrawer({
         push("❌ Checkout failed. Try again.");
       }
     } catch (err) {
-      console.error("Checkout error:", err);
+      console.error("Checkout error:", {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
+      });
       push(
         err.response?.data?.error ||
           "❌ Could not create checkout session."

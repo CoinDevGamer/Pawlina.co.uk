@@ -8,7 +8,9 @@
     "dev": "node --watch server.js",
     "build": "echo \"No build step needed\"",
     "lint": "echo \"No lint configured\"",
-    "test": "echo \"No tests configured\""
+    "test": "echo \"No tests configured\"",
+    "check": "node --check server.js",
+    "backup:db": "node scripts/backup-db.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

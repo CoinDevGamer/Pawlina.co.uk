@@ -3,6 +3,7 @@ import axios from "axios";
 // Backend URL from Vite env variable
 const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const BASE_URL = import.meta.env.BASE_URL || "/";
+const AUTH_TOKEN_KEY = "auth_token";
 
 export const IMAGE_FALLBACK =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='480' viewBox='0 0 640 480'><rect width='100%25' height='100%25' fill='%23f2e7d4'/><rect x='24' y='24' width='592' height='432' rx='24' ry='24' fill='%23f9f4ea' stroke='%23e5d4b5' stroke-width='2'/><text x='50%25' y='50%25' text-anchor='middle' font-family='Arial, sans-serif' font-size='22' fill='%23907145'>Image unavailable</text></svg>";
@@ -17,6 +18,33 @@ const withBase = (path) => {
 export const api = axios.create({
   baseURL: API_URL ? `${API_URL}/api` : "/api",
   withCredentials: true,
+});
+
+const getAuthToken = () => {
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+};
+
+const setAuthToken = (token) => {
+  try {
+    if (!token) {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      return;
+    }
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  } catch {}
+};
+
+api.interceptors.request.use((config) => {
+  const token = getAuthToken();
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export const full = (path) => {
@@ -78,10 +106,21 @@ export const Auth = {
       latitude: p.latitude,   // passed from browser
       longitude: p.longitude, // passed from browser
     })
-    .then((r) => r.data),
+    .then((r) => {
+      if (r.data?.token) setAuthToken(r.data.token);
+      return r.data;
+    }),
 
-  login: (p) => api.post("/auth/login", p).then((r) => r.data),
-  logout: () => api.post("/auth/logout").then((r) => r.data),
+  login: (p) =>
+    api.post("/auth/login", p).then((r) => {
+      if (r.data?.token) setAuthToken(r.data.token);
+      return r.data;
+    }),
+  logout: () =>
+    api.post("/auth/logout").then((r) => {
+      setAuthToken("");
+      return r.data;
+    }),
 };
 
 // ============================

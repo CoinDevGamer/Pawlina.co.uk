@@ -9,8 +9,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, "data");
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir);
 
-// Fully absolute DB path
-const dbPath = path.join(dataDir, "farmbarn.db");
+const configuredDbPath = (process.env.DB_PATH || "").trim();
+// Fully absolute DB path (supports external persistent volume via DB_PATH)
+const dbPath = configuredDbPath
+  ? (path.isAbsolute(configuredDbPath)
+      ? configuredDbPath
+      : path.join(__dirname, configuredDbPath))
+  : path.join(dataDir, "farmbarn.db");
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 console.log("📦 USING DATABASE:", dbPath);
 
 const db = new Database(dbPath);
@@ -34,7 +41,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT UNIQUE,
-  slug TEXT UNIQUE
+  slug TEXT UNIQUE,
+  species TEXT DEFAULT ''
 );
 
 CREATE TABLE IF NOT EXISTS items (
@@ -82,11 +90,17 @@ CREATE TABLE IF NOT EXISTS password_resets (
   attempts INTEGER DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS app_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
 `);
 
-// ---------- SAFE MIGRATIONS (NO ALTER TABLE CATEGORIES!) ----------
+// ---------- SAFE MIGRATIONS ----------
 try { db.prepare("ALTER TABLE items ADD COLUMN image_url TEXT DEFAULT ''").run(); } catch {}
 try { db.prepare("ALTER TABLE items ADD COLUMN species TEXT DEFAULT ''").run(); } catch {}
+try { db.prepare("ALTER TABLE categories ADD COLUMN species TEXT DEFAULT ''").run(); } catch {}
 
 // ---------- FIX EXISTING CATEGORY SLUGS ----------
 const catRows = db.prepare("SELECT id,name,slug FROM categories").all();
@@ -101,33 +115,115 @@ for (const c of catRows) {
 
 // ---------- SEED DEFAULT DATA ----------
 export function seedIfNeeded() {
-  const count = db.prepare("SELECT COUNT(*) AS c FROM items").get().c;
-  if (count > 0) return;
+  const autoSeedEnv = (process.env.AUTO_SEED || "").trim().toLowerCase();
+  const autoSeedEnabled = autoSeedEnv === "true";
+  if (!autoSeedEnabled) return;
+
+  const seeded = db
+    .prepare("SELECT value FROM app_meta WHERE key='seeded_v1'")
+    .get()?.value;
+  if (seeded === "1") return;
+
+  const itemCount = db.prepare("SELECT COUNT(*) AS c FROM items").get().c;
+  if (itemCount > 0) {
+    db.prepare(
+      "INSERT INTO app_meta (key, value) VALUES ('seeded_v1','1') ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+    ).run();
+    return;
+  }
 
   console.log("🐾 Seeding Pawlina categories & items...");
 
-  db.exec("DELETE FROM categories;");
+  const baseCategories = [
+    { name: "Accessories", slug: "accessories", species: "" },
+    { name: "Natural Chews", slug: "natural-chews", species: "" },
+    { name: "Supplements", slug: "supplements", species: "" },
+    { name: "Treats", slug: "treats", species: "" },
+  ];
 
-  const insertCat = db.prepare("INSERT INTO categories (name,slug) VALUES (?,?)");
-
-  const cats = {
-    Accessories: insertCat.run("Accessories", "accessories").lastInsertRowid,
-    "Natural Chews": insertCat.run("Natural Chews", "natural-chews").lastInsertRowid,
-    Supplements: insertCat.run("Supplements", "supplements").lastInsertRowid,
-    Treats: insertCat.run("Treats", "treats").lastInsertRowid,
-  };
-
-  const insertItem = db.prepare(`
-    INSERT INTO items (category_id, name, description, species, price_cents, image_url, in_stock, special_offer)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+  const baseItems = [
+    {
+      categorySlug: "accessories",
+      name: "Dog Collar",
+      description: "Durable collar.",
+      species: "dog",
+      price_cents: 1299,
+      image_url: "/images/dog_acc1.jpg",
+      in_stock: 1,
+      special_offer: 0,
+    },
+    {
+      categorySlug: "natural-chews",
+      name: "Beef Chew Bone",
+      description: "Chew bone.",
+      species: "dog",
+      price_cents: 799,
+      image_url: "/images/dog_chew1.jpg",
+      in_stock: 1,
+      special_offer: 1,
+    },
+    {
+      categorySlug: "accessories",
+      name: "Cat Collar",
+      description: "Soft collar.",
+      species: "cat",
+      price_cents: 899,
+      image_url: "/images/cat_acc1.jpg",
+      in_stock: 1,
+      special_offer: 0,
+    },
+    {
+      categorySlug: "treats",
+      name: "Salmon Treats",
+      description: "Tasty treats.",
+      species: "cat",
+      price_cents: 499,
+      image_url: "/images/cat_treat1.jpg",
+      in_stock: 1,
+      special_offer: 1,
+    },
+  ];
 
   const tx = db.transaction(() => {
-    insertItem.run(cats.Accessories, "Dog Collar", "Durable collar.", "dog", 1299, "/images/dog_acc1.jpg", 1, 0);
-    insertItem.run(cats["Natural Chews"], "Beef Chew Bone", "Chew bone.", "dog", 799, "/images/dog_chew1.jpg", 1, 1);
+    for (const c of baseCategories) {
+      db.prepare(
+        "INSERT OR IGNORE INTO categories (name, slug, species) VALUES (?, ?, ?)"
+      ).run(c.name, c.slug, c.species);
+    }
 
-    insertItem.run(cats.Accessories, "Cat Collar", "Soft collar.", "cat", 899, "/images/cat_acc1.jpg", 1, 0);
-    insertItem.run(cats.Treats, "Salmon Treats", "Tasty treats.", "cat", 499, "/images/cat_treat1.jpg", 1, 1);
+    for (const it of baseItems) {
+      const cat = db
+        .prepare("SELECT id FROM categories WHERE slug=?")
+        .get(it.categorySlug);
+      if (!cat?.id) continue;
+
+      const existing = db
+        .prepare(
+          "SELECT id FROM items WHERE name=? AND species=? AND category_id=? LIMIT 1"
+        )
+        .get(it.name, it.species, cat.id);
+      if (existing) continue;
+
+      db.prepare(
+        `
+        INSERT INTO items (category_id, name, description, species, price_cents, image_url, in_stock, special_offer)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `
+      ).run(
+        cat.id,
+        it.name,
+        it.description,
+        it.species,
+        it.price_cents,
+        it.image_url,
+        it.in_stock,
+        it.special_offer
+      );
+    }
+
+    db.prepare(
+      "INSERT INTO app_meta (key, value) VALUES ('seeded_v1','1') ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+    ).run();
   });
 
   tx();

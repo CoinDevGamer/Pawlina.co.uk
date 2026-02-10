@@ -58,6 +58,9 @@
     "client:deploy": "npm --prefix client run deploy",
     "server:dev": "npm --prefix server run dev",
     "server:start": "npm --prefix server run start",
+    "server:check": "npm --prefix server run check",
+    "server:backup": "npm --prefix server run backup:db",
+    "ci:check": "npm run server:check && npm run client:build",
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\""
   },
   "devDependencies": {
