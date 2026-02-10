@@ -2,6 +2,10 @@ import React from "react";
 import { motion } from "framer-motion";
 
 export default function Cancel() {
+  const goHome = () => {
+    window.location.href = `${window.location.origin}${window.location.pathname}#/`;
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#f9ecce] via-[#f6e3bf] to-[#f3d7a6] px-4">
       <motion.div
@@ -16,18 +20,20 @@ export default function Cancel() {
           Your payment didn’t complete. No charges were made. You can revisit your basket and try again when ready.
         </p>
         <div className="flex justify-center gap-3">
-          <a
-            href="/"
+          <button
+            type="button"
+            onClick={goHome}
             className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#f9d99b] to-[#e4b96e] text-[#2f1f13] font-semibold shadow-md hover:shadow-lg transition"
           >
             Back to shop
-          </a>
-          <a
-            href="/"
+          </button>
+          <button
+            type="button"
+            onClick={goHome}
             className="px-5 py-2 rounded-xl border border-[#e5d4b5] text-[#3f2817] bg-white hover:bg-[#fff6e5] transition"
           >
             View basket
-          </a>
+          </button>
         </div>
       </motion.div>
     </div>

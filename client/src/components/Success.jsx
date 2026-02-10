@@ -6,6 +6,9 @@ import { motion } from "framer-motion";
 export default function Success() {
   const [status, setStatus] = useState("saving"); // saving | ok | fail
   const [summary, setSummary] = useState(null);   // snapshot for display only
+  const goHome = () => {
+    window.location.href = `${window.location.origin}${window.location.pathname}#/`;
+  };
 
   useEffect(() => {
     const raw = localStorage.getItem("pendingOrder");
@@ -323,28 +326,31 @@ export default function Success() {
                     Feel like spoiling them a little more?
                   </div>
                   <div className="flex flex-wrap justify-center gap-2 text-xs">
-                    <a
-                      href="/"
+                    <button
+                      type="button"
+                      onClick={goHome}
                       className="px-3 py-1.5 rounded-full border border-[#e2c392] bg-[#fff8e8] hover:bg-[#f7e2b9] text-[#5a3a1f] font-semibold transition text-[11px] sm:text-xs"
                     >
                       Browse more goodies 🧺
-                    </a>
-                    <a
-                      href="/"
+                    </button>
+                    <button
+                      type="button"
+                      onClick={goHome}
                       className="px-3 py-1.5 rounded-full border border-[#e2c392]/70 bg-white hover:bg-[#fff4dd] text-[#5a3a1f] transition text-[11px] sm:text-xs"
                     >
                       Discover new favourites ⭐
-                    </a>
+                    </button>
                   </div>
 
                   <div className="pt-2 flex justify-center">
-                    <a
-                      href="/"
+                    <button
+                      type="button"
+                      onClick={goHome}
                       className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[#e5c78a] to-[#b99753] shadow-md hover:shadow-xl hover:scale-[1.04] active:scale-[0.98] transition-transform"
                     >
                       Continue shopping
                       <span>🛍️</span>
-                    </a>
+                    </button>
                   </div>
                 </div>
               </motion.div>
