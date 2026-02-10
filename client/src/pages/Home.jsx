@@ -165,6 +165,32 @@ export default function Home() {
         </div>
       </section>
 
+      {/* STORE HOURS */}
+      <section className="max-w-6xl mx-auto px-6 pb-14">
+        <div className="rounded-3xl bg-white border border-[#ead6b8] shadow-[0_14px_38px_rgba(63,40,23,0.12)] p-6 md:p-8">
+          <div className="text-xs uppercase tracking-[0.2em] text-[#b07a3d] font-semibold">
+            In-store info
+          </div>
+          <h3 className="text-2xl md:text-3xl font-black text-[#3b2415] mt-2">
+            Opening Hours
+          </h3>
+          <p className="text-[#5a4535] mt-2">
+            Visit us during the times below.
+          </p>
+          <div className="mt-5 rounded-2xl bg-[#fff8ec] border border-[#ead6b8] px-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-[#3b2415]">
+              <div>Monday : Closed</div>
+              <div>Tuesday : 9:30 AM - 4:30 PM</div>
+              <div>Wednesday : 9:30 AM - 4:30 PM</div>
+              <div>Thursday : 9:30 AM - 4:30 PM</div>
+              <div>Friday : 9:30 AM - 4:30 PM</div>
+              <div>Saturday : 9:00 AM - 1:00 PM</div>
+              <div>Sunday : Closed</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* WHY CHOOSE */}
       <section className="max-w-6xl mx-auto px-6 py-16 space-y-10">
         <div className="text-center">

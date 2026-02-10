@@ -14,8 +14,7 @@ export default function Returns() {
         money back to the original payment method.
       </p>
       <p className="mb-3">
-        If you need help with a return or refund, please use the contact details
-        provided on the website.
+        Refund requests can be made from your logged-in account order view.
       </p>
       <p className="text-sm text-[#6f5337]">
         Last updated: February 10, 2026

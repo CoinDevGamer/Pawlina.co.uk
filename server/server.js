@@ -1181,8 +1181,9 @@ app.post("/api/checkout", auth, async (req, res) => {
       mode: "payment",
       line_items,
 
-      success_url: `${FRONTEND_BASE}/success`,
-      cancel_url: `${FRONTEND_BASE}/cancel`,
+      // Hash routes are reliable on static hosts like GitHub Pages.
+      success_url: `${FRONTEND_BASE}/#/success`,
+      cancel_url: `${FRONTEND_BASE}/#/cancel`,
 
       metadata: {
         user_id: req.user.id,
