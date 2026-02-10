@@ -167,25 +167,54 @@ export default function Home() {
 
       {/* STORE HOURS */}
       <section className="max-w-6xl mx-auto px-6 pb-14">
-        <div className="rounded-3xl bg-white border border-[#ead6b8] shadow-[0_14px_38px_rgba(63,40,23,0.12)] p-6 md:p-8">
-          <div className="text-xs uppercase tracking-[0.2em] text-[#b07a3d] font-semibold">
-            In-store info
-          </div>
-          <h3 className="text-2xl md:text-3xl font-black text-[#3b2415] mt-2">
-            Opening Hours
-          </h3>
-          <p className="text-[#5a4535] mt-2">
-            Visit us during the times below.
-          </p>
-          <div className="mt-5 rounded-2xl bg-[#fff8ec] border border-[#ead6b8] px-4 py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-[#3b2415]">
-              <div>Monday : Closed</div>
-              <div>Tuesday : 9:30 AM - 4:30 PM</div>
-              <div>Wednesday : 9:30 AM - 4:30 PM</div>
-              <div>Thursday : 9:30 AM - 4:30 PM</div>
-              <div>Friday : 9:30 AM - 4:30 PM</div>
-              <div>Saturday : 9:00 AM - 1:00 PM</div>
-              <div>Sunday : Closed</div>
+        <div className="relative overflow-hidden rounded-3xl border border-[#e6d2b0] bg-gradient-to-br from-[#fff8eb] via-[#f8e7c9] to-[#f2d7a9] shadow-[0_18px_48px_rgba(63,40,23,0.2)] p-6 md:p-8">
+          <div className="pointer-events-none absolute -top-10 -right-10 h-44 w-44 rounded-full bg-[#f6d59b]/50 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-10 -left-10 h-44 w-44 rounded-full bg-[#efc985]/40 blur-3xl" />
+
+          <div className="relative grid grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1.4fr)] gap-6 items-start">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#e4c99f] bg-white/65 px-3 py-1 text-xs uppercase tracking-[0.2em] text-[#9f6a2e] font-semibold">
+                <span>🕒</span>
+                <span>In-store info</span>
+              </div>
+              <h3 className="text-3xl md:text-4xl font-black text-[#3b2415] mt-3 leading-tight">
+                Opening Hours
+              </h3>
+              <p className="text-[#5a4535] mt-2 max-w-md">
+                Pop in during these times for advice, collections, and fresh stock.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-[#dfc498] bg-white/80 backdrop-blur-sm p-3 md:p-4 shadow-[0_10px_24px_rgba(63,40,23,0.13)]">
+              <div className="space-y-2">
+                {[
+                  { day: "Monday", time: "Closed", closed: true },
+                  { day: "Tuesday", time: "9:30 AM - 4:30 PM", closed: false },
+                  { day: "Wednesday", time: "9:30 AM - 4:30 PM", closed: false },
+                  { day: "Thursday", time: "9:30 AM - 4:30 PM", closed: false },
+                  { day: "Friday", time: "9:30 AM - 4:30 PM", closed: false },
+                  { day: "Saturday", time: "9:00 AM - 1:00 PM", closed: false },
+                  { day: "Sunday", time: "Closed", closed: true },
+                ].map((row) => (
+                  <div
+                    key={row.day}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#ead6b8] bg-[#fffaf0] px-3 py-2"
+                  >
+                    <div className="text-[#3b2415] font-semibold">
+                      {row.day} : <span className="font-medium">{row.time}</span>
+                    </div>
+                    <span
+                      className={`text-[11px] uppercase tracking-[0.08em] font-bold rounded-full px-2.5 py-1 ${
+                        row.closed
+                          ? "bg-[#f8d5d2] text-[#9a2f2f]"
+                          : "bg-[#dff0da] text-[#2f6a2d]"
+                      }`}
+                    >
+                      {row.closed ? "Closed" : "Open"}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

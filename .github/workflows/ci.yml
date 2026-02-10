@@ -17,12 +17,8 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: |
-            package-lock.json
             client/package-lock.json
             server/package-lock.json
-
-      - name: Install root deps
-        run: npm ci
 
       - name: Install server deps
         run: npm --prefix server ci
@@ -30,5 +26,8 @@ jobs:
       - name: Install client deps
         run: npm --prefix client ci
 
-      - name: Run checks
-        run: npm run ci:check
+      - name: Check server syntax
+        run: npm --prefix server run check
+
+      - name: Build client
+        run: npm --prefix client run build
