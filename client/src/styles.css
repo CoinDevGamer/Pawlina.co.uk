@@ -2,19 +2,110 @@
 @tailwind components;
 @tailwind utilities;
 
-.btn-rivet { @apply px-4 py-2 rounded-plank text-white font-semibold shadow-rivet; background: linear-gradient(#a94f31,#7e3b20); border:2px solid rgba(0,0,0,.3); position:relative;}
-.btn-rivet::before,.btn-rivet::after{content:''; position:absolute; width:10px; height:10px; border-radius:9999px; background:#3b2a23; box-shadow: inset 0 0 0 2px rgba(255,255,255,.1); top:50%; transform:translateY(-50%);}
-.btn-rivet::before{left:8px} .btn-rivet::after{right:8px}
-.card-parchment{ @apply rounded-plank p-4 border bg-barn-parchment; }
-.input-etched{ @apply rounded-md px-3 py-2 border w-full; background:#fbf7ee; border-color:#6e7376; }
-.bg-wood{ background: linear-gradient(180deg,#7a503e,#5a3d2f); color:#f7efe8; }
-.badge{ @apply inline-flex items-center text-xs px-2 py-0.5 rounded-full border; }
-.badge-red{ @apply badge; background:#fee2e2; border-color:#fecaca; }
-.badge-green{ @apply badge; background:#dcfce7; border-color:#bbf7d0; }
-.badge-amber{ @apply badge; background:#fef3c7; border-color:#fde68a; }
+@layer base {
+  :root {
+    --surface-50: 253 253 252;
+    --surface-100: 248 246 243;
+    --surface-200: 238 234 225;
+    --surface-300: 223 215 201;
+    --surface-400: 204 165 142;
+    --ink: 44 37 32;
+    --ink-muted: 94 84 74;
+    --ink-light: 136 125 114;
+  }
 
-@keyframes shine {
-  0% { transform: translateX(-150%); }
-  60% { transform: translateX(150%); }
-  100% { transform: translateX(150%); }
+  .dark {
+    --surface-50: 19 16 14;
+    --surface-100: 29 24 21;
+    --surface-200: 44 37 32;
+    --surface-300: 58 50 44;
+    --surface-400: 74 64 56;
+    --ink: 253 253 252;
+    --ink-muted: 184 176 168;
+    --ink-light: 136 125 114;
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    @apply bg-surface-50 text-ink transition-colors duration-300;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-heading tracking-tight text-ink;
+  }
+}
+
+@layer components {
+
+  /* Modern soft button */
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium text-white transition-all duration-300 rounded-2xl bg-gradient-to-br from-brand-400 to-brand-600 shadow-float hover:shadow-float-lg hover:scale-[1.02] active:scale-[0.98];
+  }
+
+  .btn-primary::after {
+    content: '';
+    @apply absolute inset-0 bg-white/20 translate-x-[-100%] skew-x-[-15deg] transition-all duration-700 ease-in-out;
+  }
+
+  .btn-primary:hover::after {
+    @apply translate-x-[200%];
+  }
+
+  /* Modern secondary button */
+  .btn-secondary {
+    @apply relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-medium transition-all duration-300 rounded-2xl bg-surface-100 border border-surface-200 text-ink shadow-soft hover:bg-white hover:shadow-float hover:border-brand-200 active:scale-[0.98];
+  }
+
+  /* Premium Card surface */
+  .card-surface {
+    @apply rounded-[1.5rem] bg-white border border-surface-200 shadow-soft transition-all duration-300 hover:shadow-float;
+  }
+
+  /* Input styling */
+  .input-modern {
+    @apply w-full px-4 py-3 rounded-xl bg-surface-100 border border-surface-200 text-ink placeholder-ink-light transition-all duration-200 outline-none focus:bg-white focus:border-brand-300 focus:ring-4 focus:ring-brand-100;
+  }
+
+  .badge-modern {
+    @apply inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full bg-brand-50 text-brand-700 border border-brand-100;
+  }
+}
+
+/* Base custom styles used by some admin components that we don't want to completely break yet */
+.btn-rivet {
+  @apply px-4 py-2 rounded-lg font-semibold bg-brand-500 text-white shadow-md hover:bg-brand-600 transition;
+}
+
+.card-parchment {
+  @apply rounded-xl p-4 bg-surface-50 border border-surface-200 shadow-sm;
+}
+
+.input-etched {
+  @apply input-modern;
+}
+
+.bg-wood {
+  @apply bg-gradient-to-b from-ink to-ink-muted text-surface-100;
+}
+
+.badge {
+  @apply inline-flex items-center text-xs px-2 py-0.5 rounded-full border border-surface-200 bg-surface-50 text-ink-muted;
+}
+
+.badge-red {
+  @apply badge bg-red-50 border-red-200 text-red-700;
+}
+
+.badge-green {
+  @apply badge bg-emerald-50 border-emerald-200 text-emerald-700;
+}
+
+.badge-amber {
+  @apply badge bg-amber-50 border-amber-200 text-amber-700;
 }

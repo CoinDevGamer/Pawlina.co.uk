@@ -268,7 +268,7 @@ export default function Success() {
                           </div>
                         ))}
                       </div>
-                      <div className="mt-2 pt-2 border-top border-[#e4cda4]/70 flex items-center justify-between text-[11px]">
+                      <div className="mt-2 pt-2 border-t border-[#e4cda4]/70 flex items-center justify-between text-[11px]">
                         <span className="uppercase tracking-wide text-black/60">
                           Total
                         </span>

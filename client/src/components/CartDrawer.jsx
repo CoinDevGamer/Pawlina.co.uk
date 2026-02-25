@@ -15,7 +15,6 @@ export default function CartDrawer({
   push,
 }) {
   const MAX_ITEM_QTY = 10;
-  if (!open) return null;
 
   const updateQty = (id, d) =>
     setCart((c) =>
@@ -31,9 +30,6 @@ export default function CartDrawer({
 
   const remove = (id) => setCart((c) => c.filter((x) => x.id !== id));
 
-  /* ------------------------------------------------------------
-     CHECKOUT — with SNAPSHOT saved for Success page
-  ------------------------------------------------------------ */
   const handleCheckout = async () => {
     if (!user) {
       push("⚠️ Please sign in before placing an order.");
@@ -110,233 +106,168 @@ export default function CartDrawer({
     }
   };
 
-  const checkoutDisabled =
-    (delivery === "deliver" && totalCents < 2000) || cart.length === 0;
+  const checkoutDisabled = (delivery === "deliver" && totalCents < 2000) || cart.length === 0;
 
   return (
     <AnimatePresence>
       {open && (
         <>
-          {/* BACKDROP */}
           <motion.div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9998]"
-            onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-ink/40 backdrop-blur-sm z-[9998]"
+            onClick={onClose}
           />
 
-          {/* DRAWER */}
           <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", stiffness: 120, damping: 18 }}
-            className="
-              fixed right-0 top-0 h-full w-full sm:w-[440px]
-              bg-gradient-to-b from-[#f9ecce] to-[#f3d7a6]
-              shadow-[0_0_60px_rgba(0,0,0,0.35)]
-              z-[9999] p-5 overflow-y-auto
-              border-l border-[#d9b980]/40
-            "
-            onClick={(e) => e.stopPropagation()}
+            initial={{ x: "100%", opacity: 0, scale: 0.95 }}
+            animate={{ x: 0, opacity: 1, scale: 1 }}
+            exit={{ x: "100%", opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed right-0 top-0 h-[100dvh] w-full sm:w-[500px] bg-surface-50 shadow-[-20px_0_40px_rgba(44,37,32,0.1)] z-[10000] flex flex-col overflow-hidden"
           >
-            {/* GOLD BAR */}
-            <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#d1b06b] via-[#f7e6b5] to-[#d1b06b] shadow"></div>
-
             {/* HEADER */}
-            <div className="flex items-center justify-between mb-6 pt-3">
-              <div className="text-3xl font-extrabold text-[#4d331e] drop-shadow-sm flex items-center gap-2">
-                🛒 Your Basket
+            <div className="flex items-center justify-between px-8 py-6 bg-white border-b border-surface-200 sticky top-0 z-10">
+              <div className="text-3xl font-black font-heading tracking-tight text-ink flex items-center gap-3">
+                <span className="text-3xl">🛒</span> Your Basket
               </div>
-              <button className="text-3xl hover:scale-125 transition" onClick={onClose}>
+              <button
+                onClick={onClose}
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-surface-200 text-ink hover:text-brand-600 hover:bg-brand-50 hover:border-brand-200 transition-colors shadow-sm"
+              >
                 ✕
               </button>
             </div>
 
-            {/* ITEMS */}
-            <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1 pb-4">
-              {cart.length === 0 && (
-                <div className="text-black/60 text-center py-20 text-xl font-medium">
-                  Your basket is empty.
-                </div>
-              )}
-
-              {cart.map((i) => (
-                <motion.div
-                  key={i.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  whileHover={{ scale: 1.02 }}
-                  className="
-                    bg-[#fffaf1] rounded-2xl border border-[#ead7b1]
-                    shadow-lg p-4 transition relative
-                    hover:shadow-[0_8px_28px_rgba(0,0,0,0.15)]
-                  "
-                >
-                  <div className="absolute -top-2 -left-2 text-amber-300 opacity-30 text-4xl rotate-[-20deg]">
-                    🐾
+            {/* CONTENT */}
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
+              <div className="space-y-4">
+                {cart.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-48 text-center bg-white rounded-3xl border border-surface-200 p-8 shadow-sm">
+                    <div className="text-4xl opacity-50 mb-4">🛒</div>
+                    <div className="text-xl font-bold font-heading text-ink">Your basket is empty</div>
+                    <p className="text-ink-muted text-sm mt-2">Looks like you haven't added anything yet.</p>
                   </div>
-
-                  <div className="font-bold text-xl text-[#3c2614] tracking-tight">
-                    {i.name}
-                  </div>
-
-                  <div className="flex items-center gap-4 mt-4">
-                    <button
-                      className="w-8 h-8 rounded-lg bg-[#d4b07a] text-white font-bold shadow hover:brightness-110"
-                      onClick={() => updateQty(i.id, -1)}
+                ) : (
+                  cart.map((i, index) => (
+                    <motion.div
+                      key={i.id}
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ delay: index * 0.05, type: "spring", stiffness: 300 }}
+                      className="card-surface p-5 flex flex-col relative group"
                     >
-                      -
-                    </button>
+                      <button
+                        onClick={() => remove(i.id)}
+                        className="absolute top-4 right-4 text-ink-muted hover:text-red-500 transition-colors w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-50"
+                      >
+                        ✕
+                      </button>
 
-                    <span className="w-8 text-center font-semibold text-lg text-[#3c2614]">
-                      {i.qty}
-                    </span>
+                      <div className="font-bold text-lg font-heading text-ink tracking-tight pr-10">
+                        {i.name}
+                      </div>
 
-                    <button
-                      className="w-8 h-8 rounded-lg bg-[#d4b07a] text-white font-bold shadow hover:brightness-110"
-                      onClick={() => updateQty(i.id, 1)}
-                    >
-                      +
-                    </button>
+                      <div className="flex items-center justify-between mt-6">
+                        <div className="flex items-center gap-3 bg-surface-50 border border-surface-200 rounded-xl p-1">
+                          <button
+                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-white text-ink shadow-sm hover:text-brand-600 border border-surface-100 transition-colors"
+                            onClick={() => updateQty(i.id, -1)}
+                          >
+                            -
+                          </button>
+                          <span className="w-6 text-center font-bold text-ink">
+                            {i.qty}
+                          </span>
+                          <button
+                            className="w-8 h-8 rounded-lg flex items-center justify-center bg-white text-ink shadow-sm hover:text-brand-600 border border-surface-100 transition-colors"
+                            onClick={() => updateQty(i.id, 1)}
+                          >
+                            +
+                          </button>
+                        </div>
 
-                    <div className="flex-1" />
-
-                    <div className="font-extrabold text-lg text-[#3c2614]">
-                      £{((i.price_cents * i.qty) / 100).toFixed(2)}
-                    </div>
-
-                    <button
-                      className="text-red-600 text-sm hover:text-red-800"
-                      onClick={() => remove(i.id)}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
+                        <div className="font-black text-xl text-brand-600">
+                          £{((i.price_cents * i.qty) / 100).toFixed(2)}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </div>
             </div>
 
-            {/* -------------------------------------------------------------
-                 PERFECTLY PROPORTIONAL DELIVERY SELECTOR
-            ------------------------------------------------------------- */}
-            <div className="mt-6">
-              <div className="text-sm font-semibold text-[#3c2614] mb-2 flex items-center gap-1">
-                Delivery method <span className="text-sm">🐾</span>
-              </div>
+            {/* FOOTER - DELIVERY & CHECKOUT */}
+            <div className="bg-white border-t border-surface-200 p-6 md:p-8 space-y-6 shadow-[0_-10px_30px_rgba(44,37,32,0.05)] sticky bottom-0 z-20">
+              
+              <div>
+                <div className="text-[11px] font-bold tracking-widest uppercase text-brand-600 mb-3 ml-1">
+                  Delivery Method
+                </div>
+                <div className="relative flex bg-surface-50 rounded-2xl p-1.5 border border-surface-200 shadow-inner">
+                  <motion.div
+                    className="absolute top-[6px] bottom-[6px] w-[calc(50%-6px)] rounded-xl bg-white shadow-sm border border-surface-100"
+                    animate={{ x: delivery === "collect" ? 0 : "100%" }}
+                    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  />
 
-              <div
-                className="
-                  relative flex bg-gradient-to-r from-[#f5e4bd] to-[#e4c88a]
-                  rounded-3xl p-1 shadow-inner border border-[#d4b07a]/60
-                "
-              >
-                {/* SLIDING PILL */}
-                <motion.div
-                  className="
-                    absolute top-[4px] bottom-[4px]
-                    w-[49%]
-                    rounded-2xl bg-[#fffdf9]
-                    shadow-[0_4px_12px_rgba(0,0,0,0.15)]
-                    border border-[#e3d7b8]
-                  "
-                  animate={{
-                    x: delivery === "collect" ? 0 : "100%",
-                  }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 260,
-                    damping: 22,
-                  }}
-                />
-
-                <div className="flex w-full relative z-10">
                   <button
-                    onClick={() => {
-                      if (navigator.vibrate) navigator.vibrate(10);
-                      setDelivery("collect");
-                    }}
-                    className="flex-1 py-2.5 text-center"
+                    onClick={() => setDelivery("collect")}
+                    className={`relative z-10 flex-1 py-3 text-center font-bold text-sm transition-colors ${
+                      delivery === "collect" ? "text-ink" : "text-ink-muted hover:text-ink/70"
+                    }`}
                   >
-                    <span
-                      className={
-                        "font-bold flex items-center justify-center gap-2 transition " +
-                        (delivery === "collect"
-                          ? "text-[#3c2614]"
-                          : "text-[#3c2614]/50")
-                      }
-                    >
-                      🏬 Collect
-                    </span>
+                    🏪 Collect in store
                   </button>
 
                   <button
-                    onClick={() => {
-                      if (navigator.vibrate) navigator.vibrate(10);
-                      setDelivery("deliver");
-                    }}
-                    className="flex-1 py-2.5 text-center"
+                    onClick={() => setDelivery("deliver")}
+                    className={`relative z-10 flex-1 py-3 text-center font-bold text-sm transition-colors ${
+                      delivery === "deliver" ? "text-ink" : "text-ink-muted hover:text-ink/70"
+                    }`}
                   >
-                    <span
-                      className={
-                        "font-bold flex items-center justify-center gap-2 transition " +
-                        (delivery === "deliver"
-                          ? "text-[#3c2614]"
-                          : "text-[#3c2614]/50")
-                      }
-                    >
-                      🚚 Deliver
-                    </span>
+                    🚚 Local Delivery
                   </button>
                 </div>
+
+                <AnimatePresence>
+                  {delivery === "deliver" && totalCents < 2000 && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                      animate={{ opacity: 1, height: "auto", marginTop: 12 }}
+                      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                      className="text-red-600 text-[13px] font-medium bg-red-50 rounded-xl px-4 py-3 border border-red-100"
+                    >
+                      ⚠️ Delivery requires a minimum order of <b>£20</b>.
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              {delivery === "deliver" && totalCents < 2000 && (
-                <div className="text-red-600 text-sm mt-2 font-semibold">
-                  ⚠️ Delivery requires a minimum order of <b>£20</b>.
-                </div>
-              )}
-            </div>
-
-            {/* FOOTER */}
-            <div className="mt-6 bg-[#fff8e8] border border-[#e2c798] rounded-2xl p-5 shadow-inner space-y-3">
-              <div className="text-sm text-black/70">
-                Delivery: <b>{delivery}</b>
-              </div>
-
-              <div className="flex items-center justify-between mt-1">
-                <div className="text-3xl font-extrabold text-[#3c2614]">
-                  £{(totalCents / 100).toFixed(2)}
+              <div className="pt-2 border-t border-surface-100">
+                <div className="flex items-center justify-between mb-6">
+                  <span className="text-ink-muted font-medium">Subtotal</span>
+                  <span className="text-3xl font-black font-heading text-ink">
+                    £{(totalCents / 100).toFixed(2)}
+                  </span>
                 </div>
 
                 <motion.button
                   disabled={checkoutDisabled}
                   onClick={handleCheckout}
-                  whileHover={!checkoutDisabled ? { scale: 1.05 } : {}}
-                  whileTap={!checkoutDisabled ? { scale: 0.9 } : {}}
-                  className={`
-                    relative px-6 py-3 text-lg font-bold rounded-xl
-                    border shadow-lg transition
-                    ${
-                      checkoutDisabled
-                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                        : "text-white bg-gradient-to-b from-[#e5c78a] to-[#b99753] border-[#f2e2b7] hover:shadow-[0_6px_20px_rgba(0,0,0,0.25)]"
-                    }
-                  `}
+                  whileHover={!checkoutDisabled ? { scale: 1.02 } : {}}
+                  whileTap={!checkoutDisabled ? { scale: 0.98 } : {}}
+                  className={`w-full py-4 text-lg btn-primary ${checkoutDisabled ? "opacity-50 cursor-not-allowed hover:scale-100 hover:shadow-float shadow-soft bg-surface-200 border-surface-300 text-ink-muted" : "shadow-float"}`}
+                  style={checkoutDisabled ? { background: "none" } : {}}
                 >
-                  <span
-                    className="
-                      absolute inset-0 rounded-xl bg-gradient-to-r
-                      from-transparent via-white/40 to-transparent
-                      translate-x-[-120%] hover:translate-x-[120%]
-                      transition duration-[800ms]
-                    "
-                  />
-                  <span className="relative">Checkout</span>
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    Checkout securely 🔒
+                  </span>
                 </motion.button>
               </div>
             </div>
+            
           </motion.div>
         </>
       )}

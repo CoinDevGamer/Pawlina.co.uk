@@ -12,14 +12,14 @@ import {
 } from "../lib/api";
 
 const woodBtn =
-  "px-4 py-2 rounded-plank text-white font-semibold shadow-rivet border border-black/30 bg-[linear-gradient(#a94f31,#7e3b20)] transition-transform active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed";
+  "px-6 py-2.5 rounded-xl text-white font-medium bg-gradient-to-br from-brand-400 to-brand-600 shadow-float hover:shadow-float-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100";
 const ghostBtn =
-  "px-3 py-2 rounded-md border text-sm hover:bg-black/5 transition disabled:opacity-40 disabled:cursor-not-allowed";
+  "px-4 py-2.5 rounded-xl border border-surface-200 text-sm font-medium bg-surface-50 text-ink hover:bg-white hover:border-brand-200 hover:shadow-soft active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed";
 const chip =
-  "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border";
-const chipGreen = chip + " bg-[#dcfce7] border-[#bbf7d0]";
-const chipRed = chip + " bg-[#fee2e2] border-[#fecaca]";
-const chipAmber = chip + " bg-[#fef3c7] border-[#fde68a]";
+  "inline-flex items-center gap-1 text-[11px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full border shadow-sm";
+const chipGreen = chip + " bg-emerald-50 border-emerald-100 text-emerald-600";
+const chipRed = chip + " bg-red-50 border-red-100 text-red-600";
+const chipAmber = chip + " bg-amber-50 border-amber-100 text-amber-600";
 
 const normalizeImageUrl = (val) => {
   if (!val) return "";
@@ -65,6 +65,7 @@ export default function AdminPanel() {
     name: "",
     description: "",
     price_cents: 0,
+    old_price_cents: 0,
     image: "",
     image_preview: "",
     in_stock: 1,
@@ -241,6 +242,7 @@ export default function AdminPanel() {
       name: it.name,
       description: it.description || "",
       price_cents: Number(it.price_cents) || 0,
+      old_price_cents: Number(it.old_price_cents) || 0,
       image: imageVal,
       image_url: imageVal,
       in_stock: it.in_stock ? 1 : 0,
@@ -335,6 +337,7 @@ export default function AdminPanel() {
       name: "",
       description: "",
       price_cents: 0,
+      old_price_cents: 0,
       image: "",
       image_preview: "",
       in_stock: 1,
@@ -354,6 +357,7 @@ export default function AdminPanel() {
       return;
     }
     const priceCents = Math.round(Number(draft.price_cents || 0) * 100);
+    const oldPriceCents = Math.round(Number(draft.old_price_cents || 0) * 100);
     const imgVal = normalizeImageUrl(draft.image || "");
     if (draftUploadStatus.loading) {
       alert("Please wait for the image upload to finish.");
@@ -371,6 +375,7 @@ export default function AdminPanel() {
         name: draft.name.trim(),
         description: draft.description || "",
         price_cents: priceCents,
+        old_price_cents: oldPriceCents,
         image_url: imgVal,
         in_stock: draft.in_stock ? 1 : 0,
         special_offer: draft.special_offer ? 1 : 0,
@@ -392,6 +397,7 @@ export default function AdminPanel() {
     setEditingItem({
       ...row,
       price_display: (Number(row.price_cents) / 100).toFixed(2),
+      old_price_display: (Number(row.old_price_cents || 0) / 100).toFixed(2),
       image: row.image || row.image_url || "",
       image_preview: "",
     });
@@ -403,6 +409,9 @@ export default function AdminPanel() {
     if (!editingItem) return;
     const priceCents = Math.round(
       Number(editingItem.price_display || 0) * 100
+    );
+    const oldPriceCents = Math.round(
+      Number(editingItem.old_price_display || 0) * 100
     );
     const imgVal = normalizeImageUrl(editingItem.image || "");
     if (editUploadStatus.loading) {
@@ -421,6 +430,7 @@ export default function AdminPanel() {
         name: editingItem.name.trim(),
         description: editingItem.description || "",
         price_cents: priceCents,
+        old_price_cents: oldPriceCents,
         image_url: imgVal,
         in_stock: editingItem.in_stock ? 1 : 0,
         special_offer: editingItem.special_offer ? 1 : 0,
@@ -683,22 +693,22 @@ export default function AdminPanel() {
 
   // ===== RENDER =====
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f9f2e8] via-[#f5e7d4] to-[#ecd6b8] text-[#2f1f13]">
+    <div className="min-h-screen bg-surface-50 text-ink">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         {/* HERO */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#3f2817] via-[#4c2f1a] to-[#2f1a0f] text-white shadow-2xl border border-[#d9b67a]/40">
-          <div className="absolute -inset-12 opacity-30 blur-3xl bg-[radial-gradient(circle_at_20%_20%,rgba(255,236,185,0.35),transparent_50%),radial-gradient(circle_at_80%_40%,rgba(255,205,145,0.3),transparent_45%)]" />
-          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_30%,#f7dca7,transparent_35%),radial-gradient(circle_at_80%_60%,#f3c987,transparent_30%)]" />
-          <div className="relative flex flex-col gap-4 p-6 lg:p-8">
+        <div className="relative overflow-hidden rounded-[2rem] bg-ink text-white shadow-float-lg border border-surface-200">
+          <div className="absolute -inset-12 opacity-30 blur-[100px] bg-[radial-gradient(circle_at_20%_20%,rgba(223,162,51,0.35),transparent_50%),radial-gradient(circle_at_80%_40%,rgba(214,181,123,0.3),transparent_45%)]" />
+          <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_20%_30%,#dfa233,transparent_35%),radial-gradient(circle_at_80%_60%,#e5ba55,transparent_30%)]" />
+          <div className="relative flex flex-col gap-4 p-8 lg:p-10">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
               <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-sm">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold tracking-widest uppercase">
                   🛠 Admin Console
                 </div>
-                <h1 className="mt-3 text-3xl md:text-4xl font-black tracking-tight">
+                <h1 className="mt-4 text-4xl md:text-5xl font-black font-heading tracking-tight">
                   Inventory & Merchandising
                 </h1>
-                <p className="mt-2 text-white/80 max-w-2xl">
+                <p className="mt-3 text-white/80 max-w-2xl text-lg font-light leading-relaxed">
                   Curate your catalogue, keep stock healthy, and publish changes with confidence.
                 </p>
               </div>
@@ -707,35 +717,35 @@ export default function AdminPanel() {
                 {speciesList.map((sp) => (
                   <button
                     key={sp.id}
-                    className={`px-3 py-2 rounded-xl border text-sm font-semibold transition ${
+                    className={`px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all ${
                       speciesTab === sp.slug
-                        ? "bg-white text-[#3f2817] border-white"
-                        : "bg-white/10 border-white/20 text-white/90 hover:bg-white/15"
+                        ? "bg-white text-ink border-white shadow-float"
+                        : "bg-white/10 border-white/20 text-white/90 hover:bg-white/20 hover:scale-[1.02]"
                     }`}
                     onClick={() => setSpeciesTab(sp.slug)}
                   >
-                    <span className="mr-1">{sp.icon || "🐾"}</span>
+                    <span className="mr-2 text-lg">{sp.icon || "🐾"}</span>
                     {sp.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex flex-wrap gap-4 items-center mt-4">
               <div className="text-sm text-white/70">
                 Active species: <span className="font-semibold text-white">{activeSpeciesLabel}</span>
               </div>
-              <div className="hidden sm:block h-4 w-px bg-white/20" />
+              <div className="hidden sm:block h-6 w-px bg-white/20" />
               <select
-                className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm outline-none backdrop-blur placeholder:text-white/60"
+                className="rounded-xl border border-white/30 bg-white/10 px-4 py-2 text-sm outline-none backdrop-blur focus:ring-2 focus:ring-brand-400 placeholder:text-white/60 appearance-none font-medium"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 title="Filter"
               >
-                <option value="all">All items</option>
-                <option value="in">In stock</option>
-                <option value="out">Out of stock</option>
-                <option value="special">Special offers</option>
+                <option value="all" className="text-ink">All items</option>
+                <option value="in" className="text-ink">In stock</option>
+                <option value="out" className="text-ink">Out of stock</option>
+                <option value="special" className="text-ink">Special offers</option>
               </select>
 
               <div className="flex-1" />
@@ -743,7 +753,7 @@ export default function AdminPanel() {
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
-                className="px-4 py-2 rounded-xl font-semibold bg-white text-[#3f2817] shadow-lg border border-[#f2e2b7]"
+                className="px-5 py-2.5 rounded-xl font-semibold bg-white text-ink shadow-float border border-surface-200"
                 onClick={openAdd}
               >
                 ➕ Add Item
@@ -753,10 +763,10 @@ export default function AdminPanel() {
                 whileHover={{ scale: changed.size ? 1.03 : 1 }}
                 whileTap={{ scale: changed.size ? 0.97 : 1 }}
                 disabled={!changed.size || saving}
-                className={`px-4 py-2 rounded-xl font-semibold border shadow-lg transition ${
+                className={`px-5 py-2.5 rounded-xl font-semibold border shadow-float transition-all ${
                   changed.size
-                    ? "bg-gradient-to-r from-amber-300 to-yellow-200 text-[#2f1f13] border-[#f4e2b7]"
-                    : "bg-white/10 border-white/20 text-white/60 cursor-not-allowed"
+                    ? "bg-brand-400 text-white border-brand-300"
+                    : "bg-white/10 border-white/20 text-white/50 cursor-not-allowed"
                 }`}
                 onClick={saveAll}
               >
@@ -767,35 +777,38 @@ export default function AdminPanel() {
         </div>
 
         {/* STATS */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {stats.map((s) => (
-            <div
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {stats.map((s, idx) => (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.1, type: "spring" }}
               key={s.label}
-              className="rounded-2xl bg-gradient-to-br from-white/90 via-[#fff5e3] to-white/80 backdrop-blur shadow-[0_15px_40px_rgba(63,40,23,0.12)] border border-[#e7d5b5] px-4 py-3"
+              className="card-surface px-6 py-5"
             >
-              <div className="text-xs uppercase tracking-wide text-[#836034]">{s.label}</div>
-              <div className="mt-1 text-3xl font-black text-[#3f2817]">{s.value}</div>
-              <div className="text-xs text-[#7a6140]">{s.hint}</div>
-            </div>
+              <div className="text-[11px] font-bold uppercase tracking-widest text-brand-600 mb-2">{s.label}</div>
+              <div className="text-4xl font-black font-heading text-ink">{s.value}</div>
+              <div className="text-sm font-medium text-ink-muted mt-2">{s.hint}</div>
+            </motion.div>
           ))}
         </div>
 
         {/* QUICK ACTIONS */}
-        <div className="rounded-3xl bg-white/80 backdrop-blur-xl shadow-[0_15px_45px_rgba(63,40,23,0.12)] border border-[#e5d4b5] px-5 py-4 flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-[#f6d59f] to-[#d9b67a] shadow-inner flex items-center justify-center text-xl">
-              ⭐
+        <div className="card-surface px-6 py-5 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center text-2xl text-brand-600 shadow-sm">
+              ✨
             </div>
             <div>
-              <div className="text-sm font-semibold text-[#3f2817]">Fast lane</div>
-              <div className="text-xs text-[#7a6140]">Add items, publish edits, or filter inventory.</div>
+              <div className="text-base font-bold text-ink">Fast lane</div>
+              <div className="text-sm text-ink-muted">Add items, publish edits, or filter inventory.</div>
             </div>
           </div>
           <div className="flex-1" />
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={openAdd}
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#f5d59b] to-[#d8b26f] text-[#2f1f13] font-semibold shadow-md hover:shadow-lg transition"
+              className="px-5 py-2.5 rounded-xl bg-brand-50 text-brand-700 font-bold border border-brand-100 hover:bg-brand-100 transition-colors"
             >
               ➕ New item
             </button>
@@ -1044,172 +1057,173 @@ export default function AdminPanel() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[3fr,1fr] gap-6">
+        <div className="flex flex-col gap-10">
           {/* TABLE (desktop) */}
-          <div className="overflow-hidden rounded-3xl border border-[#e5d4b5] bg-gradient-to-b from-white via-[#fff8ef] to-[#f8ead4] shadow-2xl hidden md:block">
-            <div className="px-5 py-4 border-b border-[#f0e3cd] flex items-center justify-between">
-              <div>
-                <div className="text-lg font-black text-[#3f2817] flex items-center gap-3">
-                  <span>Catalogue</span>
-                  <span className="text-xs px-3 py-1 rounded-full bg-[#f6e4c4] text-[#5f3b1f] border border-[#e5d4b5] shadow-sm">
-                    Inline edits save to draft — publish with “Save”.
+          <div className="card-surface overflow-hidden hidden md:block">
+            <div className="px-6 py-5 border-b border-surface-200 bg-surface-50 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="text-2xl font-black font-heading text-ink flex items-center gap-2">
+                  <span className="text-3xl">📦</span> Catalogue
+                </h2>
+                <div className="flex items-center gap-2 mt-1 md:mt-0">
+                  <span className="text-xs px-3 py-1.5 rounded-full bg-white border border-surface-200 text-ink-muted shadow-sm">
+                    ✨ Inline edits auto-save to draft
                   </span>
-                  <span className="text-[11px] px-2 py-1 rounded-full bg-white border border-[#e5d4b5] text-[#7a6140] shadow-sm">
-                    Tip: click any image to edit the item
+                  <span className="text-xs px-3 py-1.5 rounded-full bg-white border border-surface-200 text-ink-muted shadow-sm hidden lg:inline-flex">
+                    Tip: click image to edit
                   </span>
                 </div>
               </div>
-              <div className="text-sm text-[#7a6140]">
-                {filtered.length} items · {filter} view
+              <div className="text-sm font-bold text-brand-700 px-4 py-2 bg-brand-50 border border-brand-100 rounded-xl shadow-sm">
+                {filtered.length} items
               </div>
             </div>
+            
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gradient-to-r from-[#fbf3e3] via-[#f8ebd5] to-[#fbf3e3] text-left text-[#3f2817] uppercase tracking-wide text-[11px]">
+              <table className="w-full text-sm text-left whitespace-nowrap">
+                <thead className="bg-surface-100 text-ink-muted uppercase tracking-wider text-xs border-b border-surface-200">
                   <tr>
-                    <th className="p-3 font-semibold">Image</th>
-                    <th className="p-3 font-semibold">Name</th>
-                    <th className="p-3 font-semibold">Category</th>
-                    <th className="p-3 font-semibold">Species</th>
-                    <th className="p-3 font-semibold">Price (£)</th>
-                    <th className="p-3 font-semibold">Stock</th>
-                    <th className="p-3 font-semibold">Special</th>
-                    <th className="p-3 font-semibold text-right">Actions</th>
+                    <th className="px-6 py-4 font-bold">Item</th>
+                    <th className="px-6 py-4 font-bold">Category & Species</th>
+                    <th className="px-6 py-4 font-bold text-center">Price (£)</th>
+                    <th className="px-6 py-4 font-bold text-center">Status</th>
+                    <th className="px-6 py-4 font-bold text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="[&>tr:nth-child(even)]:bg-white/70 [&>tr:nth-child(odd)]:bg-white">
+                <tbody className="divide-y divide-surface-200">
                   <AnimatePresence initial={false}>
                     {filtered.map((row) => (
                       <motion.tr
                         key={row.id}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -4 }}
-                        className="border-t border-[#f0e4cf] hover:bg-[#fff7eb] transition shadow-[0_4px_18px_rgba(0,0,0,0.04)]"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="bg-white hover:bg-surface-50 transition-colors"
                       >
-                        <td className="p-3">
-                          <button
-                            onClick={() => openEdit(row)}
-                            className="relative focus:outline-none group"
-                            title="Click to edit"
-                          >
-                            <img
-                              src={imgSrc(row)}
-                              alt={row.name}
-                              onError={(e) => {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = IMAGE_FALLBACK;
-                              }}
-                              className="w-16 h-12 rounded-lg border border-[#e7d5b5] object-cover bg-[#f5e9d4] shadow-sm transition group-hover:scale-[1.03]"
+                        <td className="px-6 py-4 align-middle">
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={() => openEdit(row)}
+                              className="relative focus:outline-none group block shrink-0"
+                              title="Click to edit"
+                            >
+                              <img
+                                src={imgSrc(row)}
+                                alt={row.name}
+                                onError={(e) => {
+                                  e.currentTarget.onerror = null;
+                                  e.currentTarget.src = IMAGE_FALLBACK;
+                                }}
+                                className="w-16 h-16 rounded-xl border border-surface-200 object-cover bg-surface-100 shadow-sm transition group-hover:scale-105"
+                              />
+                              <span className="absolute inset-0 rounded-xl bg-ink/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[10px] text-white font-bold backdrop-blur-[2px]">
+                                Edit
+                              </span>
+                            </button>
+                            <input
+                              className="input-modern py-2.5 min-w-[180px] font-medium"
+                              value={row.name || ""}
+                              onChange={(e) => onField(row, "name", e.target.value)}
+                              placeholder="Item Name"
                             />
-                            <span className="absolute inset-0 rounded-lg bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-[10px] text-white font-semibold">
-                              Edit
-                            </span>
-                          </button>
+                          </div>
                         </td>
 
-                        <td className="p-3 align-top">
-                          <input
-                            className="input-etched"
-                            value={row.name || ""}
-                            onChange={(e) => onField(row, "name", e.target.value)}
-                          />
+                        <td className="px-6 py-4 align-middle">
+                          <div className="flex flex-col gap-2 min-w-[140px]">
+                            <select
+                              className="input-modern py-2 pl-3 pr-8 text-sm"
+                              value={row.category_id || ""}
+                              onChange={(e) => onField(row, "category_id", Number(e.target.value))}
+                            >
+                              {categoryOptionsForItem(row).map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              className="input-modern py-2 pl-3 pr-8 text-sm"
+                              value={row.species || speciesTab}
+                              onChange={(e) => onField(row, "species", e.target.value)}
+                            >
+                              {speciesList.map((sp) => (
+                                <option key={sp.id} value={sp.slug}>
+                                  {sp.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </td>
 
-                        <td className="p-3 align-top">
-                          <select
-                            className="input-etched"
-                            value={row.category_id || ""}
-                            onChange={(e) => onField(row, "category_id", Number(e.target.value))}
-                          >
-                            {categoryOptionsForItem(row).map((c) => (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
+                        <td className="px-6 py-4 align-middle min-w-[120px]">
+                          <div className="flex items-center justify-center">
+                            <span className="text-ink-muted font-bold mr-1">£</span>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              className="input-modern py-2 w-20 text-center font-bold text-brand-600 px-1"
+                              value={(Number(row.price_cents) / 100).toFixed(2)}
+                              onChange={(e) =>
+                                onField(row, "price_cents", Math.round(Number(e.target.value || 0) * 100))
+                              }
+                            />
+                          </div>
                         </td>
 
-                        <td className="p-3 align-top">
-                          <select
-                            className="input-etched"
-                            value={row.species || speciesTab}
-                            onChange={(e) => onField(row, "species", e.target.value)}
-                          >
-                            {speciesList.map((sp) => (
-                              <option key={sp.id} value={sp.slug}>
-                                {sp.label}
-                              </option>
-                            ))}
-                          </select>
+                        <td className="px-6 py-4 align-middle">
+                          <div className="flex flex-col gap-2 min-w-[120px] items-center">
+                            <button
+                              className={`w-full px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                                row.in_stock
+                                  ? "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
+                                  : "bg-surface-100 border-surface-200 text-ink-muted hover:bg-surface-200"
+                              }`}
+                              onClick={() => toggleStock(row)}
+                            >
+                              {row.in_stock ? "✓ In Stock" : "X Out of Stock"}
+                            </button>
+                            <button
+                              className={`w-full px-3 py-1.5 rounded-xl text-xs font-bold border transition ${
+                                row.special_offer
+                                  ? "bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                                  : "bg-surface-100 border-surface-200 text-ink-muted hover:bg-surface-200"
+                              }`}
+                              onClick={() => toggleSpecial(row)}
+                            >
+                              {row.special_offer ? "★ Special Offer" : "— No Special"}
+                            </button>
+                          </div>
                         </td>
 
-                        <td className="p-3 align-top">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            className="input-etched w-24"
-                            value={(Number(row.price_cents) / 100).toFixed(2)}
-                            onChange={(e) =>
-                              onField(row, "price_cents", Math.round(Number(e.target.value || 0) * 100))
-                            }
-                          />
-                        </td>
-
-                        <td className="p-3 align-top">
-                          {row.in_stock ? (
-                            <span className={chipGreen}>In stock</span>
-                          ) : (
-                            <span className={chipRed}>Out of stock</span>
-                          )}
-                          <button
-                            className={`ml-2 px-3 py-1 rounded-lg text-xs font-semibold border ${
-                              row.in_stock
-                                ? "bg-gradient-to-r from-emerald-200 to-emerald-300 border-emerald-300 text-[#064e3b]"
-                                : "bg-gradient-to-r from-amber-200 to-amber-300 border-amber-300 text-[#78350f]"
-                            }`}
-                            onClick={() => toggleStock(row)}
-                            title="Toggle stock"
-                          >
-                            Switch
-                          </button>
-                        </td>
-
-                        <td className="p-3 align-top">
-                          {row.special_offer ? (
-                            <span className={chipAmber}>Special</span>
-                          ) : (
-                            <span className="text-xs text-black/60">—</span>
-                          )}
-                          <button
-                            className="ml-2 px-3 py-1 rounded-lg text-xs font-semibold border bg-gradient-to-r from-[#fde68a] to-[#fcd34d] border-[#f59e0b] text-[#5b3412]"
-                            onClick={() => toggleSpecial(row)}
-                            title="Toggle special"
-                          >
-                            Toggle
-                          </button>
-                        </td>
-
-                        <td className="p-3 text-right align-top space-x-2">
-                          <button
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#d6b68f] bg-gradient-to-r from-[#fff7eb] to-[#f5e4c6] text-[#3f2817] shadow-sm hover:shadow-md transition"
-                            onClick={() => openEdit(row)}
-                          >
-                            ✏️ Edit
-                          </button>
-                          <button
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-[#d6b68f] bg-white text-[#3f2817] shadow-sm hover:shadow-md transition"
-                            onClick={() => softDelete(row)}
-                          >
-                            🌿 Soft remove now
-                          </button>
-                          <button
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-red-300 bg-gradient-to-r from-red-100 to-red-200 text-red-700 shadow-sm hover:shadow-md transition"
-                            onClick={() => hardDelete(row)}
-                          >
-                            🗑 Delete
-                          </button>
+                        <td className="px-6 py-4 align-middle">
+                          <div className="flex justify-end gap-2">
+                            <div className="flex flex-col gap-2">
+                              <button
+                                className="px-4 py-2 bg-white hover:bg-surface-50 border border-surface-200 rounded-xl text-sm font-bold text-ink transition-colors shadow-sm"
+                                onClick={() => openEdit(row)}
+                              >
+                                Edit Props
+                              </button>
+                              <div className="flex gap-2">
+                                <button
+                                  className="px-3 py-1.5 bg-white hover:bg-surface-50 border border-surface-200 rounded-xl text-xs font-bold text-ink transition-colors shadow-sm"
+                                  onClick={() => softDelete(row)}
+                                  title="Hide item"
+                                >
+                                  Hide
+                                </button>
+                                <button
+                                  className="px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl text-xs font-bold text-red-700 transition-colors shadow-sm"
+                                  onClick={() => hardDelete(row)}
+                                  title="Delete item"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </td>
                       </motion.tr>
                     ))}
@@ -1333,32 +1347,32 @@ export default function AdminPanel() {
             </AnimatePresence>
           </div>
 
-          {/* RIGHT COLUMN: species + categories */}
-          <div className="space-y-4">
+          {/* BOTTOM COLUMN: species + categories side-by-side */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Species manager */}
-            <div className="border border-[#e5d4b5] rounded-2xl bg-white shadow-xl p-4 space-y-3">
-              <div className="font-bold text-lg flex items-center gap-2 text-[#3f2817]">
-                🐾 Species
+            <div className="card-surface p-6 space-y-4">
+              <div className="font-bold text-xl flex items-center gap-2 text-ink font-heading">
+                🐾 Manage Species
               </div>
 
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
                 {speciesList.map((sp) => (
                   <div
                     key={sp.id}
-                    className={`flex items-center justify-between rounded-xl px-3 py-2 border transition cursor-pointer ${
+                    className={`flex items-center justify-between rounded-xl px-4 py-3 border transition cursor-pointer ${
                       speciesTab === sp.slug
-                        ? "bg-[#fff4dc] border-[#e7c996]"
-                        : "bg-white border-[#f0e3cd] hover:border-[#e7c996]"
+                        ? "bg-brand-50 border-brand-200 shadow-sm"
+                        : "bg-surface-50 border-surface-200 hover:border-brand-200"
                     }`}
                     onClick={() => setSpeciesTab(sp.slug)}
                   >
-                    <div className="flex items-center gap-2">
-                      <span>{sp.icon || "🐾"}</span>
-                      <span className="text-sm font-medium">{sp.label}</span>
-                      <span className="text-xs text-black/50">/{sp.slug}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{sp.icon || "🐾"}</span>
+                      <span className="text-sm font-bold">{sp.label}</span>
+                      <span className="text-xs text-ink-muted bg-surface-200 px-2 py-0.5 rounded-full">/{sp.slug}</span>
                     </div>
                     <button
-                      className="text-xs text-red-700 hover:underline"
+                      className="text-xs text-red-600 font-bold hover:text-red-700 py-1"
                       onClick={(e) => {
                         e.stopPropagation();
                         deleteSpecies(sp);
@@ -1369,59 +1383,59 @@ export default function AdminPanel() {
                   </div>
                 ))}
                 {speciesList.length === 0 && (
-                  <div className="text-xs text-black/60">No species yet – add one below.</div>
+                  <div className="text-sm text-ink-muted italic">No species yet – add one below.</div>
                 )}
               </div>
 
-              <div className="border-t border-[#f0e3cd] pt-3 space-y-2">
-                <div className="text-sm font-semibold">Add new species</div>
-                <input
-                  className="input-etched"
-                  placeholder="e.g. Fish"
-                  value={newSpeciesName}
-                  onChange={(e) => setNewSpeciesName(e.target.value)}
-                />
-                <input
-                  className="input-etched"
-                  placeholder="Icon (emoji), e.g. 🐟"
-                  value={newSpeciesIcon}
-                  onChange={(e) => setNewSpeciesIcon(e.target.value)}
-                />
-                <button className={woodBtn} disabled={!newSpeciesName.trim() || speciesBusy} onClick={createSpecies}>
-                  ➕ Create Species
+              <div className="border-t border-surface-200 pt-4 space-y-3">
+                <div className="text-sm font-bold text-ink">Add new species</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    className="input-modern py-2.5"
+                    placeholder="Name (e.g. Fish)"
+                    value={newSpeciesName}
+                    onChange={(e) => setNewSpeciesName(e.target.value)}
+                  />
+                  <input
+                    className="input-modern py-2.5"
+                    placeholder="Icon (e.g. 🐟)"
+                    value={newSpeciesIcon}
+                    onChange={(e) => setNewSpeciesIcon(e.target.value)}
+                  />
+                </div>
+                <button className="btn-primary w-full py-2.5 text-sm" disabled={!newSpeciesName.trim() || speciesBusy} onClick={createSpecies}>
+                  + Create Species
                 </button>
               </div>
             </div>
 
             {/* Category manager */}
-            <div className="border border-[#e5d4b5] rounded-2xl bg-white shadow-xl p-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="font-bold text-lg flex items-center gap-2 text-[#3f2817]">
-                  📂 Categories
-                </div>
+            <div className="card-surface p-6 space-y-4">
+              <div className="font-bold text-xl flex items-center gap-2 text-ink font-heading">
+                📂 Manage Categories
               </div>
 
-              <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                 {visibleCategories.map((c) => (
                   <div
                     key={c.id}
-                    className="flex items-center justify-between bg-[#fffaf1] rounded-xl px-3 py-2 border border-[#f0e3cd]"
+                    className="flex items-center justify-between bg-surface-50 rounded-xl px-4 py-3 border border-surface-200 shadow-sm"
                   >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{c.name}</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full border border-[#e7d5b5] text-[#7a6140]">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-bold">{c.name}</span>
+                      <span className="text-[10px] px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 font-bold border border-brand-100 uppercase tracking-widest">
                         {c.species
                           ? speciesList.find((s) => s.slug === c.species)?.label || c.species
                           : "All species"}
                       </span>
                     </div>
-                    <button className="text-xs text-red-700 hover:underline" onClick={() => deleteCategory(c)}>
+                    <button className="text-xs font-bold text-red-600 hover:text-red-700" onClick={() => deleteCategory(c)}>
                       Delete
                     </button>
                   </div>
                 ))}
                 {visibleCategories.length === 0 && (
-                  <div className="text-xs text-black/60">No categories yet – create one below.</div>
+                  <div className="text-sm text-ink-muted italic">No categories yet – create one below.</div>
                 )}
               </div>
 
@@ -1568,17 +1582,28 @@ export default function AdminPanel() {
                   </label>
 
                   <div className="grid grid-cols-2 gap-4 col-span-2">
-                    <label>
-                      <div className="text-xs font-semibold text-[#7a6140] mb-1">Price (£)</div>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        className="input-etched bg-white"
-                        value={draft.price_cents}
-                        onChange={(e) => setDraft({ ...draft, price_cents: e.target.value })}
-                      />
-                    </label>
+                      <label>
+                        <div className="text-xs font-semibold text-[#7a6140] mb-1">Price (£)</div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="input-etched bg-white"
+                          value={draft.price_cents}
+                          onChange={(e) => setDraft({ ...draft, price_cents: e.target.value })}
+                        />
+                      </label>
+                      <label>
+                        <div className="text-xs font-semibold text-[#7a6140] mb-1">Old Price (£)</div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="input-etched bg-white"
+                          value={draft.old_price_cents}
+                          onChange={(e) => setDraft({ ...draft, old_price_cents: e.target.value })}
+                        />
+                      </label>
 
                     <label>
                       <div className="text-xs font-semibold text-[#7a6140] mb-1">Upload Image</div>
@@ -1795,14 +1820,14 @@ export default function AdminPanel() {
                   </label>
 
                   <div className="grid grid-cols-2 gap-4 col-span-2 items-start">
-                    <label>
-                      <div className="text-xs font-semibold text-[#7a6140] mb-1">Price (£)</div>
-                      <div className="relative">
+                    <div className="grid grid-cols-2 gap-2">
+                      <label>
+                        <div className="text-xs font-semibold text-[#7a6140] mb-1">Price (£)</div>
                         <input
                           type="number"
                           min="0"
                           step="0.01"
-                          className="input-etched bg-white pr-16"
+                          className="input-etched bg-white pr-2"
                           value={editingItem.price_display}
                           onChange={(e) =>
                             setEditingItem({
@@ -1811,11 +1836,24 @@ export default function AdminPanel() {
                             })
                           }
                         />
-                        <div className="absolute inset-y-0 right-2 flex items-center text-xs text-[#7a6140]">
-                          feels good ✔
-                        </div>
-                      </div>
-                    </label>
+                      </label>
+                      <label>
+                        <div className="text-xs font-semibold text-[#7a6140] mb-1">Old Price (£)</div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="input-etched bg-white"
+                          value={editingItem.old_price_display}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              old_price_display: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
 
                     <label>
                       <div className="text-xs font-semibold text-[#7a6140] mb-1">Upload Image</div>

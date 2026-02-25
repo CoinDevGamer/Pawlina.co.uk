@@ -61,9 +61,8 @@ export default function Header({ user, onOrders, onBasket, onAccount }) {
     <header
       className="
         sticky top-0 z-50
-        bg-gradient-to-r from-[#3b2415] via-[#4d2e1a] to-[#3b2415]
-        border-b border-[#d4b07a]/40 backdrop-blur-xl
-        shadow-[0_8px_20px_rgba(0,0,0,0.35)]
+        bg-white/90 backdrop-blur-xl border-b border-surface-200
+        shadow-soft
       "
     >
       {/* PARTICLES */}
@@ -72,18 +71,18 @@ export default function Header({ user, onOrders, onBasket, onAccount }) {
           {particles.map((p, i) => (
             <motion.div
               key={i}
-              className="absolute rounded-full bg-[#e6c089]"
+              className="absolute rounded-full bg-brand-400"
               style={{
                 width: p.size,
                 height: p.size,
                 top: p.top,
                 left: p.left,
-                opacity: 0.12,
-                filter: "blur(3px)",
+                opacity: 0.1,
+                filter: "blur(2px)",
               }}
               animate={{
                 y: [0, -20, 0],
-                opacity: [0.1, 0.4, 0.1],
+                opacity: [0.05, 0.2, 0.05],
               }}
               transition={{
                 duration: p.duration,
@@ -96,57 +95,45 @@ export default function Header({ user, onOrders, onBasket, onAccount }) {
         </div>
       )}
 
-      <div className="w-full px-6 py-3 flex items-center justify-between gap-6">
+      <div className="w-full max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-6">
 
         {/* BRAND LEFT */}
         <motion.div
           className="flex items-center gap-4 cursor-pointer shrink-0"
-          whileHover={{ scale: 1.03 }}
+          whileHover={{ y: -2 }}
         >
           <motion.div
-            className="
-              w-14 h-14 rounded-full border-2 border-[#d4b07a]
-              shadow-[0_0_25px_rgba(212,176,122,0.4)]
-              bg-[#3b2415] overflow-hidden
-            "
-            whileHover={{ rotate: 5, scale: 1.06 }}
-            whileTap={{ scale: 0.88, rotate: -10 }}
+            className="w-12 h-12 rounded-2xl border bg-white border-surface-200 shadow-sm overflow-hidden flex items-center justify-center"
+            whileHover={{ rotate: 5, scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             <img
               src={publicUrl("/images/pawlina-logo.png")}
               alt="Pawlina’s Pet Shop"
-              className="w-full h-full object-cover scale-[1.08]"
+              className="w-[85%] h-[85%] object-contain scale-[1.1]"
             />
           </motion.div>
 
-
-          <div className="flex flex-col leading-tight select-none">
-            <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-[#d6b27d] to-[#f6e9c9] drop-shadow-lg tracking-wide font-serif">
-              Pawlina’s Pet Shop
+          <div className="flex flex-col leading-tight select-none mt-0.5">
+            <span className="text-2xl font-black font-heading tracking-tight text-ink">
+              Pawlina's
             </span>
-            <span className="text-sm text-[#f0dcb3] opacity-80">
-              Luxury Natural Pet Products
+            <span className="text-xs font-medium tracking-widest uppercase text-brand-600">
+              Pet Shop
             </span>
           </div>
         </motion.div>
 
         {/* NAV */}
-        <nav className="hidden md:flex items-center gap-4 flex-wrap">
-          <GoldBtn to="/">🏠 Home</GoldBtn>
-
-          {navLoading && (
-            <div className="flex items-center gap-3 text-[#f0dcb3] text-xs uppercase tracking-[0.2em]">
-              <span className="inline-block w-3 h-3 rounded-full bg-[#f0dcb3]/80 animate-pulse" />
-              Loading sections…
-            </div>
-          )}
+        <nav className="hidden md:flex items-center gap-2 flex-wrap text-sm font-semibold text-ink-muted">
+          <GoldBtn to="/">Home</GoldBtn>
 
           {navLoading && (
             <div className="flex items-center gap-2">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={`skeleton-${i}`}
-                  className="h-9 w-28 rounded-xl bg-[#d7b179]/30 border border-[#e8d1aa]/40 animate-pulse"
+                  className="h-10 w-24 rounded-xl bg-surface-100 border border-surface-200 animate-pulse"
                 />
               ))}
             </div>
@@ -158,45 +145,44 @@ export default function Header({ user, onOrders, onBasket, onAccount }) {
                 onClick={() =>
                   setOpenMenu(openMenu === s.slug ? null : s.slug)
                 }
-                className="px-4 py-2 min-w-[110px]
-                  bg-gradient-to-b from-[#d7b179] to-[#b68a55]
-                  text-[#3b2415] rounded-xl shadow-lg
-                  hover:shadow-amber-300/40 border border-[#e8d1aa]
-                  transition-all flex items-center justify-center gap-2
-                  relative overflow-hidden"
+                className="px-5 py-2.5 rounded-xl hover:bg-surface-100 hover:text-ink transition-colors flex items-center justify-center gap-2 relative overflow-hidden focus:outline-none"
               >
-                <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-150%] hover:translate-x-[150%] transition-all duration-700" />
-                <span className="relative">{s.icon} {s.label} ▼</span>
+                <span className="relative z-10 flex items-center gap-2 leading-none font-medium">
+                  {s.icon} {s.label}
+                  <svg className={`w-3.5 h-3.5 transition-transform opacity-60 ${openMenu === s.slug ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </span>
               </button>
 
               {/* DROPDOWN */}
               <AnimatePresence>
                 {openMenu === s.slug && (
                   <motion.div
-                    initial={{ opacity: 0, y: 12, scale: 0.96, filter: "blur(6px)" }}
+                    initial={{ opacity: 0, y: 12, scale: 0.98, filter: "blur(4px)" }}
                     animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, y: 12, scale: 0.96, filter: "blur(6px)" }}
-                    transition={{ duration: 0.18 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.98, filter: "blur(4px)" }}
+                    transition={{ duration: 0.2 }}
                     className="
                       absolute left-0 mt-3 w-64
-                      bg-gradient-to-br from-[#fff5e3] to-[#f1dfc2]
-                      border border-[#d5b27e] shadow-2xl rounded-2xl p-4 z-[999]
+                      bg-white
+                      border border-surface-200 shadow-float rounded-[1.5rem] p-3 z-[999]
                     "
                   >
-                    <div className="text-[#5a3a23] font-bold pb-2 border-b border-amber-300/40 uppercase tracking-wide">
+                    <div className="text-ink font-bold pb-3 pt-2 px-3 border-b border-surface-100 uppercase tracking-widest text-xs">
                       Shop {s.label}
                     </div>
 
-                    <div className="flex flex-col gap-2 mt-3">
+                    <div className="flex flex-col gap-1 mt-2">
                       {getCatsFor(s.slug).map((cat) => (
                         <Link
                           key={cat.id}
                           to={`/${s.slug}/${cat.slug}`} 
-                          className="p-3 rounded-xl bg-[#fdf8ee] hover:bg-[#f6e7c7]
-                                     transition-all shadow-sm hover:shadow-md
-                                     text-[#4c2d1a] font-medium flex items-center gap-2"
+                          className="px-4 py-3 rounded-xl hover:bg-surface-50 hover:text-brand-700
+                                     transition-colors text-ink font-medium flex items-center gap-3"
+                          onClick={() => setOpenMenu(null)}
                         >
-                          🐾 {cat.name}
+                          <span className="text-xl">🐾</span> {cat.name}
                         </Link>
                       ))}
                     </div>
@@ -206,23 +192,25 @@ export default function Header({ user, onOrders, onBasket, onAccount }) {
             </div>
           ))}
 
-          {user?.role === "admin" && <GoldBtn to="/admin">🛠 Admin</GoldBtn>}
+          {user?.role === "admin" && <GoldBtn to="/admin">Admin</GoldBtn>}
         </nav>
 
         {/* ACTIONS RIGHT */}
         <div className="hidden md:flex items-center gap-3 shrink-0">
-          <RoundGoldBtn icon="📦" label="Orders" onClick={onOrders} />
-          <RoundGoldBtn icon="🛒" label="Basket" onClick={onBasket} />
-          <RoundGoldBtn icon="👤" label="Account" onClick={onAccount} />
+          <RoundGoldBtn icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>} onClick={onOrders} />
+          <RoundGoldBtn icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>} onClick={onBasket} />
+          <RoundGoldBtn icon={<svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>} onClick={onAccount} />
         </div>
 
         {/* MOBILE ICON */}
         <motion.button
           onClick={() => setMobileOpen(!mobileOpen)}
-          whileTap={{ scale: 0.85 }}
-          className="md:hidden text-4xl text-[#e7c792]"
+          whileTap={{ scale: 0.9 }}
+          className="md:hidden p-3 text-ink bg-surface-50 rounded-xl"
         >
-          ☰
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
         </motion.button>
       </div>
 
@@ -233,34 +221,40 @@ export default function Header({ user, onOrders, onBasket, onAccount }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="md:hidden bg-gradient-to-b from-[#4c2e18] to-[#3b2415] p-6 text-[#f7e7c9] border-t border-[#d4b07a]/40 shadow-xl"
+            className="md:hidden bg-white px-6 pb-6 text-ink border-t border-surface-200 shadow-soft overflow-hidden"
           >
-            <MobileLink to="/" label="🏠 Home" closeMenu={() => setMobileOpen(false)} />
+            <div className="mt-4 space-y-2 font-medium">
+              <MobileLink to="/" label="Home" closeMenu={() => setMobileOpen(false)} />
 
-            {speciesList.map((s) => (
-              <div key={s.slug} className="mt-4">
-                <div className="text-xl font-bold mb-2 text-[#f2d7a6]">{s.icon} {s.label}</div>
+              {speciesList.map((s) => (
+                <div key={s.slug} className="pt-4 border-t border-surface-100 mt-2">
+                  <div className="text-sm uppercase tracking-widest text-brand-600 font-bold mb-3 pl-2">{s.icon} {s.label}</div>
 
-                {getCatsFor(s.slug).map((cat) => (
-                  <MobileLink
-                    key={cat.id}
-                    to={`/${s.slug}/${cat.slug}`} 
-                    label={`🐾 ${cat.name}`}
-                    closeMenu={() => setMobileOpen(false)}
-                  />
-                ))}
+                  <div className="grid grid-cols-2 gap-2">
+                    {getCatsFor(s.slug).map((cat) => (
+                      <MobileLink
+                        key={cat.id}
+                        to={`/${s.slug}/${cat.slug}`} 
+                        label={cat.name}
+                        closeMenu={() => setMobileOpen(false)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="h-[1px] bg-surface-200 my-6"></div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <MobileLink label="Orders" click={onOrders} closeMenu={() => setMobileOpen(false)} />
+                <MobileLink label="Basket" click={onBasket} closeMenu={() => setMobileOpen(false)} />
+                <MobileLink label="Account" click={onAccount} closeMenu={() => setMobileOpen(false)} />
+
+                {user?.role === "admin" && (
+                  <MobileLink to="/admin" label="Admin" closeMenu={() => setMobileOpen(false)} />
+                )}
               </div>
-            ))}
-
-            <div className="h-[1px] bg-[#c6a16a] my-4 opacity-60"></div>
-
-            <MobileLink label="📦 Orders" click={onOrders} closeMenu={() => setMobileOpen(false)} />
-            <MobileLink label="🛒 Basket" click={onBasket} closeMenu={() => setMobileOpen(false)} />
-            <MobileLink label="👤 Account" click={onAccount} closeMenu={() => setMobileOpen(false)} />
-
-            {user?.role === "admin" && (
-              <MobileLink to="/admin" label="🛠 Admin" closeMenu={() => setMobileOpen(false)} />
-            )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -276,29 +270,22 @@ function GoldBtn({ to, children }) {
   return (
     <Link
       to={to}
-      className="px-4 py-2 min-w-[110px] text-center flex justify-center items-center
-                 rounded-xl bg-gradient-to-b from-[#d7b179] to-[#b68a55]
-                 text-[#3b2415] shadow-md hover:shadow-xl
-                 border border-[#e8d1aa] transition-all relative overflow-hidden"
+      className="px-5 py-2.5 rounded-xl hover:bg-surface-100 transition-colors font-medium flex items-center justify-center text-ink"
     >
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/18 to-transparent translate-x-[-150%] hover:translate-x-[150%] transition-all duration-700" />
-      <span className="relative">{children}</span>
+      <span className="relative z-10 leading-none">{children}</span>
     </Link>
   );
 }
 
-function RoundGoldBtn({ icon, label, onClick }) {
+function RoundGoldBtn({ icon, onClick }) {
   return (
     <motion.button
       onClick={onClick}
-      whileHover={{ scale: 1.1 }}
-      whileTap={{ scale: 0.85 }}
-      className="px-4 py-2 rounded-full bg-gradient-to-b from-[#d7b179] to-[#b68a55]
-                 text-[#3b2415] shadow-lg hover:shadow-amber-300/50 border border-[#ebd2ae]
-                 transition-all flex items-center gap-2 relative overflow-hidden"
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className="w-11 h-11 rounded-[14px] bg-surface-50 border border-surface-200 text-ink hover:text-brand-600 hover:bg-white hover:border-brand-200 shadow-sm transition-colors flex items-center justify-center"
     >
-      <span className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/18 to-transparent translate-x-[-150%] hover:translate-x-[150%] transition-all duration-700" />
-      <span className="relative">{icon} {label}</span>
+      {icon}
     </motion.button>
   );
 }

@@ -13,8 +13,8 @@ const configuredDbPath = (process.env.DB_PATH || "").trim();
 // Fully absolute DB path (supports external persistent volume via DB_PATH)
 const dbPath = configuredDbPath
   ? (path.isAbsolute(configuredDbPath)
-      ? configuredDbPath
-      : path.join(__dirname, configuredDbPath))
+    ? configuredDbPath
+    : path.join(__dirname, configuredDbPath))
   : path.join(dataDir, "farmbarn.db");
 const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS items (
   description TEXT DEFAULT '',
   species TEXT DEFAULT '',
   price_cents INTEGER DEFAULT 0,
+  old_price_cents INTEGER DEFAULT 0,
   image_url TEXT DEFAULT '',
   in_stock INTEGER DEFAULT 1,
   special_offer INTEGER DEFAULT 0,
@@ -98,9 +99,10 @@ CREATE TABLE IF NOT EXISTS app_meta (
 `);
 
 // ---------- SAFE MIGRATIONS ----------
-try { db.prepare("ALTER TABLE items ADD COLUMN image_url TEXT DEFAULT ''").run(); } catch {}
-try { db.prepare("ALTER TABLE items ADD COLUMN species TEXT DEFAULT ''").run(); } catch {}
-try { db.prepare("ALTER TABLE categories ADD COLUMN species TEXT DEFAULT ''").run(); } catch {}
+try { db.prepare("ALTER TABLE items ADD COLUMN image_url TEXT DEFAULT ''").run(); } catch { }
+try { db.prepare("ALTER TABLE items ADD COLUMN species TEXT DEFAULT ''").run(); } catch { }
+try { db.prepare("ALTER TABLE categories ADD COLUMN species TEXT DEFAULT ''").run(); } catch { }
+try { db.prepare("ALTER TABLE items ADD COLUMN old_price_cents INTEGER DEFAULT 0").run(); } catch { }
 
 // ---------- FIX EXISTING CATEGORY SLUGS ----------
 const catRows = db.prepare("SELECT id,name,slug FROM categories").all();
@@ -242,7 +244,7 @@ const imageFixups = [
 for (const { from, to } of imageFixups) {
   try {
     db.prepare("UPDATE items SET image_url=? WHERE image_url=?").run(to, from);
-  } catch {}
+  } catch { }
 }
 
 // ---------- BASE SPECIES ----------
@@ -254,7 +256,7 @@ const baseSpecies = [
 for (const s of baseSpecies) {
   try {
     db.prepare("INSERT INTO species (slug, label, icon) VALUES (?, ?, ?)").run(s.slug, s.label, s.icon);
-  } catch {}
+  } catch { }
 }
 
 export default db;

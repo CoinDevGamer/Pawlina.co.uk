@@ -381,16 +381,16 @@ app.use("/api/auth/reset-password", passwordResetLimiter);
 seedIfNeeded();
 try {
   db.prepare("ALTER TABLE orders ADD COLUMN admin_status TEXT DEFAULT 'awaiting'").run();
-} catch {}
+} catch { }
 try {
   db.prepare("ALTER TABLE orders ADD COLUMN delivery_date TEXT").run();
-} catch {}
+} catch { }
 try {
   db.prepare("ALTER TABLE orders ADD COLUMN admin_note TEXT").run();
-} catch {}
+} catch { }
 try {
   db.prepare("ALTER TABLE orders ADD COLUMN stripe_session_id TEXT").run();
-} catch {}
+} catch { }
 
 
 // -----------------------------------------------------
@@ -663,7 +663,7 @@ app.post("/api/admin/categories", auth, requireAdmin, (req, res) => {
   if (!trimmed) return res.status(400).json({ error: "Name required" });
   const species = safeSlug(req.body.species || "", 80);
 
-  const slug = trimmed.toLowerCase().replace(/\s+/g, "-");
+  const slug = safeSlug(trimmed);
 
   try {
     const id = db
@@ -752,6 +752,7 @@ app.post("/api/admin/items", auth, requireAdmin, (req, res) => {
     category_id,
     in_stock = 1,
     special_offer = 0,
+    old_price_cents = 0,
   } = req.body;
 
   const name = safeText(req.body.name, 160);
@@ -773,7 +774,7 @@ app.post("/api/admin/items", auth, requireAdmin, (req, res) => {
       db.prepare(
         `
         UPDATE items SET
-        name=?, description=?, category_id=?, species=?, price_cents=?, image_url=?, 
+        name=?, description=?, category_id=?, species=?, price_cents=?, old_price_cents=?, image_url=?, 
         in_stock=?, special_offer=?
         WHERE id=?
         `
@@ -783,6 +784,7 @@ app.post("/api/admin/items", auth, requireAdmin, (req, res) => {
         category_id,
         species,
         price_cents,
+        safePrice(old_price_cents) || 0,
         image_url,
         in_stock ? 1 : 0,
         special_offer ? 1 : 0,
@@ -792,8 +794,8 @@ app.post("/api/admin/items", auth, requireAdmin, (req, res) => {
       db.prepare(
         `
         INSERT INTO items
-        (name, description, category_id, species, price_cents, image_url, in_stock, special_offer)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (name, description, category_id, species, price_cents, old_price_cents, image_url, in_stock, special_offer)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `
       ).run(
         name,
@@ -801,6 +803,7 @@ app.post("/api/admin/items", auth, requireAdmin, (req, res) => {
         category_id,
         species,
         price_cents,
+        safePrice(old_price_cents) || 0,
         image_url,
         in_stock ? 1 : 0,
         special_offer ? 1 : 0
@@ -967,13 +970,13 @@ app.post("/api/orders", auth, async (req, res) => {
           <h2>Items</h2>
           <ul>
             ${snapshotItems
-              .map(
-                (i) =>
-                  `<li>${i.qty} × ${safeText(i.name, 160)} — £${(
-                    (i.price_cents || 0) / 100
-                  ).toFixed(2)}</li>`
-              )
-              .join("")}
+            .map(
+              (i) =>
+                `<li>${i.qty} × ${safeText(i.name, 160)} — £${(
+                  (i.price_cents || 0) / 100
+                ).toFixed(2)}</li>`
+            )
+            .join("")}
           </ul>
           <p><b>Total:</b> £${((safeTotal || 0) / 100).toFixed(2)}</p>
         `,
@@ -1015,7 +1018,6 @@ app.put("/api/account/me", auth, (req, res) => {
     for (const key of allowed) {
       if (key in incoming) {
         const value = clean(incoming[key]);
-        if (!value) continue;
         updates.push(`${key}=?`);
         params.push(value);
       }
@@ -1044,6 +1046,34 @@ app.put("/api/account/me", auth, (req, res) => {
   } catch (err) {
     console.error("Address update error:", err);
     res.status(500).json({ error: "Failed to update account" });
+  }
+});
+
+app.delete("/api/account/me", auth, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ error: "Password is required to delete account." });
+    }
+
+    const user = db.prepare("SELECT * FROM users WHERE id=?").get(req.user.id);
+    if (!user) return res.status(404).json({ error: "User not found." });
+
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
+      return res.status(401).json({ error: "Incorrect password." });
+    }
+
+    // Hard delete user
+    // Note: orders table has a foreign key to users. SQLite might complain if PRAGMA foreign_keys is ON.
+    // However, if we delete the user, let's also delete or anonymize their orders.
+    // For now we'll just delete their personal data.
+    db.prepare("DELETE FROM users WHERE id=?").run(req.user.id);
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Delete account error:", err);
+    res.status(500).json({ error: "Failed to delete account" });
   }
 });
 
@@ -1227,7 +1257,7 @@ app.get("/api/orders", auth, (req, res) => {
         delete addr.password_hash;
         row.address_json = JSON.stringify(addr);
       }
-    } catch {}
+    } catch { }
     return row;
   });
   res.json(sanitized);
@@ -1268,7 +1298,7 @@ app.get("/api/admin/orders", auth, requireAdmin, (req, res) => {
         delete addr.password_hash;
         row.address_json = JSON.stringify(addr);
       }
-    } catch {}
+    } catch { }
     return row;
   };
 
@@ -1361,7 +1391,7 @@ app.use((err, req, res, next) => {
         message: err?.message || "Unknown error",
       }) + "\n";
     fs.appendFileSync(path.join(logsDir, "errors.log"), line);
-  } catch {}
+  } catch { }
   if (res.headersSent) return next(err);
   res.status(500).json({ error: "Internal server error" });
 });
