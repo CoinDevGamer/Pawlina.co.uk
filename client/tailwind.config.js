@@ -20,16 +20,16 @@ export default {
           900: '#72411e',
         },
         surface: {
-          50: 'var(--surface-50)',
-          100: 'var(--surface-100)',
-          200: 'var(--surface-200)',
-          300: 'var(--surface-300)',
-          400: 'var(--surface-400)', // Soft contrast
+          50: 'rgb(var(--surface-50) / <alpha-value>)',
+          100: 'rgb(var(--surface-100) / <alpha-value>)',
+          200: 'rgb(var(--surface-200) / <alpha-value>)',
+          300: 'rgb(var(--surface-300) / <alpha-value>)',
+          400: 'rgb(var(--surface-400) / <alpha-value>)',
         },
         ink: {
-          DEFAULT: 'var(--ink)',
-          muted: 'var(--ink-muted)',
-          light: 'var(--ink-light)',
+          DEFAULT: 'rgb(var(--ink) / <alpha-value>)',
+          muted: 'rgb(var(--ink-muted) / <alpha-value>)',
+          light: 'rgb(var(--ink-light) / <alpha-value>)',
         }
       },
       boxShadow: {

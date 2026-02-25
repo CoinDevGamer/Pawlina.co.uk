@@ -1239,9 +1239,9 @@ export default function AdminPanel() {
 
           {/* MOBILE CARDS */}
           <div className="md:hidden space-y-3">
-            <div className="rounded-2xl border border-[#e5d4b5] bg-white/90 shadow-lg p-3">
-              <div className="text-lg font-bold text-[#3f2817]">Catalogue</div>
-              <div className="text-xs text-[#7a6140]">Tap cards to edit quickly.</div>
+            <div className="rounded-2xl border border-surface-200 bg-surface-50/90 shadow-lg p-3">
+              <div className="text-lg font-bold text-ink">Catalogue</div>
+              <div className="text-xs text-ink-muted">Tap cards to edit quickly.</div>
             </div>
             <AnimatePresence>
               {filtered.map((row) => (
@@ -1250,7 +1250,7 @@ export default function AdminPanel() {
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -6 }}
-                  className="rounded-2xl border border-[#e5d4b5] bg-white/95 shadow-lg p-3 space-y-3"
+                  className="rounded-2xl border border-surface-200 bg-surface-50/95 shadow-lg p-3 space-y-3"
                 >
                   <div className="flex items-center gap-3">
                     <img
@@ -1260,7 +1260,7 @@ export default function AdminPanel() {
                         e.currentTarget.onerror = null;
                         e.currentTarget.src = IMAGE_FALLBACK;
                       }}
-                      className="w-14 h-14 rounded-xl border border-[#e7d5b5] object-cover bg-[#f5e9d4]"
+                      className="w-14 h-14 rounded-xl border border-surface-200 object-cover bg-surface-100"
                     />
                     <input
                       className="input-etched flex-1"
@@ -1307,15 +1307,15 @@ export default function AdminPanel() {
                       <button
                         className={`flex-1 px-3 py-2 rounded-xl text-xs font-semibold ${
                           row.in_stock
-                            ? "bg-gradient-to-r from-emerald-200 to-emerald-300 text-[#064e3b]"
-                            : "bg-gradient-to-r from-amber-200 to-amber-300 text-[#78350f]"
+                            ? "bg-emerald-50 border border-emerald-100 text-emerald-700"
+                            : "bg-surface-100 border border-surface-200 text-ink-muted"
                         }`}
                         onClick={() => toggleStock(row)}
                       >
                         {row.in_stock ? "In stock" : "Out of stock"}
                       </button>
                       <button
-                        className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-[#fde68a] to-[#fcd34d] text-[#5b3412]"
+                        className="flex-1 px-3 py-2 rounded-xl text-xs font-semibold bg-brand-50 border border-brand-100 text-brand-700"
                         onClick={() => toggleSpecial(row)}
                       >
                         {row.special_offer ? "Special" : "Mark special"}
@@ -1324,19 +1324,19 @@ export default function AdminPanel() {
                   </div>
                   <div className="flex flex-wrap gap-2 justify-end">
                     <button
-                      className="px-3 py-2 rounded-xl border border-[#d6b68f] bg-white text-[#3f2817] shadow-sm"
+                      className="px-3 py-2 rounded-xl border border-surface-200 bg-surface-50 text-ink shadow-sm"
                       onClick={() => openEdit(row)}
                     >
                       ✏️ Edit
                     </button>
                     <button
-                      className="px-3 py-2 rounded-xl border border-[#d6b68f] bg-white text-[#3f2817] shadow-sm"
+                      className="px-3 py-2 rounded-xl border border-surface-200 bg-surface-50 text-ink shadow-sm"
                       onClick={() => softDelete(row)}
                     >
-                      Soft remove now
+                      Hide now
                     </button>
                     <button
-                      className="px-3 py-2 rounded-xl border border-red-300 bg-gradient-to-r from-red-100 to-red-200 text-red-700 shadow-sm"
+                      className="px-3 py-2 rounded-xl border border-red-200 bg-red-50 text-red-700 shadow-sm"
                       onClick={() => hardDelete(row)}
                     >
                       🗑 Delete
